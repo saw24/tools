@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export CategoryCombo + Dépendances - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .module-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .module-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .module-header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .export-form {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 100px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-helper {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .form-helper.valid {
+            color: #10b981;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-export {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-export:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-export:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .summary-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .summary-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+        }
+
+        .summary-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <!-- Left side: Home button -->
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <!-- Right side: DHIS2 status and connection -->
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="module-container">
+        <header class="module-header">
+            <h1><i class="fas fa-layer-group"></i> Export CategoryCombo + Dépendances</h1>
+            <p class="subtitle">Exportez des CategoryCombos DHIS2 avec toutes leurs dépendances (Categories, Options,
+                Combos, Groups, etc.)</p>
+        </header>
+
+        <div class="export-form">
+            <form id="exportForm">
+                <div class="form-group">
+                    <label for="uidsInput">
+                        <i class="fas fa-list"></i> UID(s) des CategoryCombos
+                    </label>
+                    <textarea id="uidsInput"
+                        placeholder="Ex: bjDvmb4bfuf;m2jTvAj5kkm,p0KPaWEg3cf&#10;&#10;Séparez les UID par des points-virgules (;) ou des virgules (,)"
+                        required></textarea>
+                    <div class="form-helper" id="uidHelper">
+                        Séparez les UID par des <strong>points-virgules (;)</strong> ou des <strong>virgules
+                            (,)</strong>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Options d'export</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeGroups" checked>
+                            <label for="includeGroups">Inclure les CategoryOptionGroups</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeGroupSets" checked>
+                            <label for="includeGroupSets">Inclure les CategoryOptionGroupSets</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-export" id="btnExport">
+                    <i class="fas fa-download"></i>
+                    <span id="btnText">Exporter</span>
+                </button>
+            </form>
+
+            <div class="alert" id="alertBox"></div>
+
+            <div class="summary-box" id="summaryBox">
+                <div class="summary-title">
+                    <i class="fas fa-chart-bar"></i> Résumé de l'export
+                </div>
+                <div id="summaryContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <!-- Zone de feedback -->
+                <div class="auth-feedback" id="authFeedback">
+                    <div class="feedback-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="feedback-content">
+                        <div class="feedback-title">Titre</div>
+                        <div class="feedback-message">Message</div>
+                    </div>
+                    <button class="feedback-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.40.0" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        let validUids = [];
+
+        // Toast function
+        window.showToast = window.showToast || function (type, title, message) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type]}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+        };
+
+        // Check DHIS2 session on page load
+        $(document).ready(async function () {
+            if (!dhis2Session.isConnected()) {
+                showToast('error', 'Session requise', 'Vous allez être redirigé pour vous connecter...');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 3000);
+                return;
+            }
+        });
+
+        // Parse UIDs
+        function parseUids(input) {
+            const uids = input
+                .split(/[,;]/)
+                .map(u => u.trim())
+                .filter(u => u.length === 11);
+
+            validUids = [...new Set(uids)];
+
+            const helper = $('#uidHelper');
+            if (validUids.length > 0) {
+                helper.addClass('valid');
+                helper.html(`<i class="fas fa-check-circle"></i> <strong>${validUids.length} UID valide(s) détecté(s)</strong>`);
+            } else {
+                helper.removeClass('valid');
+                helper.html('Séparez les UID par des <strong>points-virgules (;)</strong> ou des <strong>virgules (,)</strong>');
+            }
+
+            updateButtonText();
+        }
+
+        // Update button text
+        function updateButtonText() {
+            const btnText = $('#btnText');
+            if (validUids.length > 0) {
+                btnText.text(`Exporter ${validUids.length} CategoryCombo(s)`);
+            } else {
+                btnText.text('Exporter');
+            }
+        }
+
+        // Input change handler
+        $('#uidsInput').on('input', function () {
+            parseUids($(this).val());
+        });
+
+        // Form submit
+        $('#exportForm').on('submit', async function (e) {
+            e.preventDefault();
+
+            if (validUids.length === 0) {
+                showAlert('error', 'Veuillez entrer au moins un UID valide');
+                return;
+            }
+
+            const includeGroups = $('#includeGroups').is(':checked');
+            const includeGroupSets = $('#includeGroupSets').is(':checked');
+
+            await exportCategoryCombos(validUids, includeGroups, includeGroupSets);
+        });
+
+        // Show alert
+        function showAlert(type, message) {
+            const alert = $('#alertBox');
+            alert.removeClass('success error').addClass(type);
+            alert.text(message);
+            alert.fadeIn();
+
+            setTimeout(() => {
+                alert.fadeOut();
+            }, 5000);
+        }
+
+        // Show summary
+        function showSummary(summary) {
+            const content = $('#summaryContent');
+            content.html(`
+                <div class="summary-item">
+                    <span class="summary-label">CategoryCombos</span>
+                    <span class="summary-value">${summary.categoryCombos}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Catégories</span>
+                    <span class="summary-value">${summary.categories}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Options</span>
+                    <span class="summary-value">${summary.categoryOptions}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Combos d'options</span>
+                    <span class="summary-value">${summary.categoryOptionCombos}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Groupes</span>
+                    <span class="summary-value">${summary.categoryOptionGroups}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">GroupSets</span>
+                    <span class="summary-value">${summary.categoryOptionGroupSets}</span>
+                </div>
+            `);
+            $('#summaryBox').fadeIn();
+        }
+
+        // Export category combos
+        async function exportCategoryCombos(uids, includeGroups, includeGroupSets) {
+            const btn = $('#btnExport');
+            const btnText = $('#btnText');
+            const originalText = btnText.text();
+
+            btn.prop('disabled', true);
+            btnText.html('<i class="fas fa-spinner fa-spin"></i> Export en cours...');
+            $('#alertBox').fadeOut();
+            $('#summaryBox').fadeOut();
+
+            try {
+                showToast('info', 'Export en cours', `Récupération de ${uids.length} CategoryCombo(s)...`);
+
+                // Récupérer la config DHIS2
+                const config = dhis2Session.getConfig();
+                if (!config) {
+                    throw new Error('Session DHIS2 non trouvée. Veuillez vous reconnecter.');
+                }
+
+                const payload = {
+                    dhis2_url: config.url,
+                    dhis2_auth: config.authHeader,
+                    categoryComboUids: uids.join(';'),
+                    includeGroups,
+                    includeGroupSets
+                };
+
+                const response = await $.ajax({
+                    url: 'api/export-category-combos.php',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    dataType: 'json'
+                });
+
+                if (!response.success) {
+                    throw new Error(response.message || 'Erreur lors de l\'export');
+                }
+
+                // Download JSON
+                const blob = new Blob([JSON.stringify(response.data, null, 2)], {
+                    type: 'application/json'
+                });
+                const filename = `category-combos-export-${new Date().toISOString().split('T')[0]}.json`;
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                showAlert('success', `✅ Export téléchargé : ${filename}`);
+                showSummary(response.summary);
+                showToast('success', 'Export réussi', `${response.summary.categoryCombos} CategoryCombo(s) exporté(s)`);
+
+            } catch (error) {
+                console.error('Erreur export:', error);
+                showAlert('error', `❌ Erreur : ${error.message || 'Une erreur est survenue'}`);
+                showToast('error', 'Erreur d\'export', error.message || 'Impossible d\'exporter les CategoryCombos');
+            } finally {
+                btn.prop('disabled', false);
+                btnText.text(originalText);
+            }
+        }
+    </script>
+</body>
+
+</html>

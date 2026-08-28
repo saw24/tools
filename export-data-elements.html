@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Éléments de Données - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .module-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .module-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .module-header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            color: #764ba2;
+            transform: translateX(-4px);
+        }
+
+        .filter-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .filter-input {
+            flex: 1;
+        }
+
+        .filter-input label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .filter-input input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .filter-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-filter {
+            padding: 12px 24px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-filter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .datasets-table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .table-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .table-stats {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .datasets-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .datasets-table thead {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .datasets-table th {
+            padding: 16px 24px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .datasets-table td {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .datasets-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .datasets-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .dataset-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .dataset-name {
+            font-weight: 500;
+        }
+
+        .btn-export {
+            padding: 8px 16px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-export:hover {
+            background: #10b981;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            max-width: 400px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            animation: slideInRight 0.3s ease;
+            display: none;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .notification.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification.info {
+            border-left: 4px solid #3b82f6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <!-- Left side: Home button -->
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <!-- Right side: DHIS2 status and connection -->
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="module-container">
+
+        <header class="module-header">
+            <h1><i class="fas fa-file-excel"></i> Export Éléments de Données</h1>
+            <p class="subtitle">Exportez les éléments de données d'un ensemble de données DHIS2 au format Excel (XLSX)
+            </p>
+        </header>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="filter-group">
+                <div class="filter-input">
+                    <label for="filterSearch">
+                        <i class="fas fa-search"></i> Rechercher
+                    </label>
+                    <input type="text" id="filterSearch" placeholder="Rechercher par ID ou nom...">
+                </div>
+                <button class="btn-filter" onclick="applyFilter()">
+                    <i class="fas fa-filter"></i> Filtrer
+                </button>
+                <button class="btn-filter" onclick="clearFilter()"
+                    style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+                    <i class="fas fa-times"></i> Effacer
+                </button>
+            </div>
+        </div>
+
+        <!-- Datasets Table -->
+        <div class="datasets-table-container">
+            <div class="table-header">
+                <h2>Ensembles de données disponibles</h2>
+                <span class="table-stats" id="tableStats">0 ensemble(s)</span>
+            </div>
+
+            <div id="tableContent">
+                <!-- Loading state -->
+                <div class="loading-state" id="loadingState">
+                    <div class="loading-spinner"></div>
+                    <p>Chargement des ensembles de données...</p>
+                </div>
+
+                <!-- Table will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <div id="notificationContent"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        let allDataSets = [];
+        let filteredDataSets = [];
+
+        // Toast function
+        window.showToast = function (type, title, message) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type]}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+        };
+
+        // Show notification
+        function showNotification(type, message) {
+            const $notification = $('#notification');
+            $notification.removeClass('error success info').addClass(type);
+            $('#notificationContent').html(message);
+            $notification.fadeIn();
+
+            setTimeout(() => {
+                $notification.fadeOut();
+            }, 5000);
+        }
+
+        // Check DHIS2 session on page load
+        $(document).ready(async function () {
+            // Check if connected
+            if (!dhis2Session.isConnected()) {
+                showNotification('error', `
+                    <strong>Session DHIS2 requise</strong><br>
+                    Vous allez être redirigé vers la page d'accueil pour vous connecter...
+                `);
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 3000);
+                return;
+            }
+
+            // Load datasets
+            await loadDataSets();
+        });
+
+        // Load datasets from DHIS2 (only basic info for performance)
+        async function loadDataSets() {
+            try {
+                $('#loadingState').show();
+
+                // Charger uniquement les informations de base (pas les éléments de données)
+                const response = await dhis2Session.getDataSets({
+                    fields: 'id,displayName,periodType,created,lastUpdated',
+                    paging: false
+                });
+
+                allDataSets = response.dataSets || [];
+                filteredDataSets = [...allDataSets];
+
+                renderTable();
+
+                showToast('success', 'Chargé', `${allDataSets.length} ensemble(s) de données chargé(s)`);
+            } catch (error) {
+                console.error('Erreur lors du chargement:', error);
+                showToast('error', 'Erreur', 'Impossible de charger les ensembles de données');
+
+                $('#tableContent').html(`
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Erreur de chargement</h3>
+                        <p>${error.message || 'Une erreur est survenue'}</p>
+                    </div>
+                `);
+            } finally {
+                $('#loadingState').hide();
+            }
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        // Render table
+        function renderTable() {
+            const $tableContent = $('#tableContent');
+
+            if (filteredDataSets.length === 0) {
+                $tableContent.html(`
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Aucun résultat</h3>
+                        <p>Aucun ensemble de données ne correspond à votre recherche</p>
+                    </div>
+                `);
+                $('#tableStats').text('0 ensemble(s)');
+                return;
+            }
+
+            let tableHtml = `
+                <table class="datasets-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nom</th>
+                            <th>Périodicité</th>
+                            <th>Date création</th>
+                            <th>Dernière MAJ</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            filteredDataSets.forEach(ds => {
+                tableHtml += `
+                    <tr>
+                        <td class="dataset-id">${ds.id}</td>
+                        <td class="dataset-name">${ds.displayName}</td>
+                        <td>${ds.periodType || 'N/A'}</td>
+                        <td>${formatDate(ds.created)}</td>
+                        <td>${formatDate(ds.lastUpdated)}</td>
+                        <td>
+                            <button class="btn-export" onclick="exportDataElements('${ds.id}', '${ds.displayName.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-download"></i> Exporter
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+
+            $tableContent.html(tableHtml);
+            $('#tableStats').text(`${filteredDataSets.length} ensemble(s)`);
+        }
+
+        // Apply filter
+        function applyFilter() {
+            const searchTerm = $('#filterSearch').val().toLowerCase().trim();
+
+            if (!searchTerm) {
+                filteredDataSets = [...allDataSets];
+            } else {
+                filteredDataSets = allDataSets.filter(ds =>
+                    ds.id.toLowerCase().includes(searchTerm) ||
+                    ds.displayName.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            renderTable();
+        }
+
+        // Clear filter
+        function clearFilter() {
+            $('#filterSearch').val('');
+            filteredDataSets = [...allDataSets];
+            renderTable();
+        }
+
+        // Filter on Enter key
+        $('#filterSearch').on('keypress', function (e) {
+            if (e.which === 13) {
+                applyFilter();
+            }
+        });
+
+        // Export data elements (chargement uniquement lors de l'export)
+        async function exportDataElements(dataSetId, dataSetName) {
+            // Trouver le bouton et le désactiver
+            const $button = $(`button[onclick*="${dataSetId}"]`);
+            const originalHtml = $button.html();
+            $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Export...');
+
+            try {
+                showToast('info', 'Récupération des données', `Chargement des éléments de "${dataSetName}"...`);
+
+                // Récupérer UNIQUEMENT les éléments de données de cet ensemble
+                const response = await dhis2Session.get(`/api/dataSets/${dataSetId}`, {
+                    fields: 'id,displayName,dataSetElements[dataElement[id,displayName,code,valueType,domainType,categoryCombo[id,displayName]]]'
+                });
+
+                const dataElements = response.dataSetElements ? response.dataSetElements.map(dse => dse.dataElement) : [];
+
+                if (dataElements.length === 0) {
+                    showToast('warning', 'Aucun élément', 'Cet ensemble de données ne contient aucun élément');
+                    return;
+                }
+
+                // Afficher le nombre d'éléments trouvés
+                showToast('info', 'Génération du fichier', `${dataElements.length} élément(s) trouvé(s), génération du fichier Excel...`);
+
+                // Préparer les données pour Excel
+                const excelData = [];
+
+                // En-têtes
+                excelData.push(['ID', 'Nom', 'Code', 'Type de valeur', 'Type de domaine', 'Catégorie Combo']);
+
+                // Données
+                dataElements.forEach(de => {
+                    const categoryCombo = de.categoryCombo ? de.categoryCombo.displayName : 'N/A';
+                    excelData.push([
+                        de.id,
+                        de.displayName,
+                        de.code || '',
+                        de.valueType,
+                        de.domainType,
+                        categoryCombo
+                    ]);
+                });
+
+                // Créer le workbook et la feuille
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+                // Définir la largeur des colonnes
+                const colWidths = [
+                    { wch: 15 },  // ID
+                    { wch: 40 },  // Nom
+                    { wch: 15 },  // Code
+                    { wch: 15 },  // Type de valeur
+                    { wch: 15 },  // Type de domaine
+                    { wch: 25 }   // Catégorie Combo
+                ];
+                ws['!cols'] = colWidths;
+
+                // Ajouter la feuille au workbook
+                const sheetName = dataSetName.substring(0, 31); // Excel limite à 31 caractères
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+                // Générer le fichier Excel
+                const filename = `data-elements_${dataSetName.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.xlsx`;
+                XLSX.writeFile(wb, filename);
+
+                showToast('success', 'Export réussi', `${dataElements.length} élément(s) exporté(s) dans ${filename}`);
+            } catch (error) {
+                console.error('Erreur lors de l\'export:', error);
+
+                let errorMessage = 'Impossible d\'exporter les éléments';
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.responseJSON && error.responseJSON.message) {
+                    errorMessage = error.responseJSON.message;
+                }
+
+                showToast('error', 'Erreur d\'export', errorMessage);
+            } finally {
+                // Réactiver le bouton
+                $button.prop('disabled', false).html(originalHtml);
+            }
+        }
+    </script>
+</body>
+
+</html>

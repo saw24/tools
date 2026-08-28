@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHIS2 Tools - Outils de Gestion de Données</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+
+            --bg-dark: #0f0f23;
+            --bg-card: rgba(255, 255, 255, 0.05);
+            --bg-card-hover: rgba(255, 255, 255, 0.08);
+
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --shadow-glow: 0 0 40px rgba(102, 126, 234, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background Animation */
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .gradient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            top: -250px;
+            left: -250px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            bottom: -200px;
+            right: -200px;
+            animation-delay: 7s;
+        }
+
+        .orb-3 {
+            width: 350px;
+            height: 350px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 14s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(100px, -100px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-100px, 100px) scale(0.9);
+            }
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .app-header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .logo-section i {
+            font-size: 64px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: pulse 2s infinite;
+        }
+
+        .logo-section h1 {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* Modules Grid */
+        .modules-section {
+            margin-top: 40px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title i {
+            font-size: 24px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        /* Module Card */
+        .module-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 0;
+        }
+
+        .module-card:hover::before {
+            opacity: 0.1;
+        }
+
+        .module-card:hover {
+            transform: translateY(-8px);
+            background: var(--bg-card-hover);
+            border-color: rgba(102, 126, 234, 0.5);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .module-card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 28px;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .module-card:hover .module-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .module-icon.primary {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            color: #667eea;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .module-icon.success {
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.2), rgba(0, 242, 254, 0.2));
+            color: #4facfe;
+            box-shadow: 0 8px 24px rgba(79, 172, 254, 0.3);
+        }
+
+        .module-icon.warning {
+            background: linear-gradient(135deg, rgba(250, 112, 154, 0.2), rgba(254, 225, 64, 0.2));
+            color: #fa709a;
+            box-shadow: 0 8px 24px rgba(250, 112, 154, 0.3);
+        }
+
+        .module-icon.secondary {
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.2), rgba(245, 87, 108, 0.2));
+            color: #f093fb;
+            box-shadow: 0 8px 24px rgba(240, 147, 251, 0.3);
+        }
+
+        .module-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .module-card:hover .module-title {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .module-description {
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Search Bar */
+        .search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 16px 24px 16px 56px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-container input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.2);
+            background: var(--bg-card-hover);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .search-container input:focus+i {
+            color: #667eea;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+            display: none;
+        }
+
+        .no-results i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            margin-top: 60px;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-4px);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .stat-info {
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .module-usage-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .module-card:hover .module-usage-badge {
+            background: rgba(102, 126, 234, 0.2);
+            color: var(--text-primary);
+            border-color: rgba(102, 126, 234, 0.4);
+            transform: scale(1.05);
+        }
+
+        /* Global Notifications */
+        .global-notif {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideInDown 0.5s ease-out;
+            color: var(--text-primary);
+        }
+
+        .global-notif.warning {
+            border-color: rgba(245, 158, 11, 0.4);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .global-notif.success {
+            border-color: rgba(16, 185, 129, 0.4);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .global-notif-icon {
+            font-size: 20px;
+        }
+
+        .global-notif-content {
+            flex: 1;
+        }
+
+        .global-notif-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .global-notif-msg {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .modules-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .modules-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .logo-section h1 {
+                font-size: 32px;
+            }
+
+            .logo-section i {
+                font-size: 48px;
+            }
+
+            .modules-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .module-card {
+                padding: 20px;
+            }
+
+            .section-title {
+                font-size: 24px;
+            }
+        }
+
+        /* Footer */
+        .app-footer {
+            text-align: center;
+            margin-top: 80px;
+            padding: 40px 20px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .app-footer p {
+            margin-bottom: 10px;
+        }
+
+        .app-footer a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .app-footer a:hover {
+            color: #764ba2;
+        }
+    </style>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <!-- Left side: Empty on home page -->
+        <div class="top-bar-left">
+            <!-- No home button on index page -->
+        </div>
+
+        <!-- Right side: DHIS2 status and connection -->
+        <div class="top-bar-content">
+            <!-- DHIS2 Connection Status -->
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="hero-section">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-layer-group"></i>
+                    <h1>DHIS2 Tools</h1>
+                </div>
+                <p class="subtitle">Suite d'outils professionnels pour la gestion et l'analyse de données</p>
+            </div>
+        </header>
+
+        <!-- Notifications Globales -->
+        <div id="globalNotifications" class="container" style="margin-top: 20px; display: none;">
+            <!-- Notifications will be injected here -->
+        </div>
+
+        <!-- Modules Section -->
+        <section class="modules-section">
+            <h2 class="section-title">
+                <i class="fas fa-th-large"></i>
+                Modules Disponibles
+            </h2>
+
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" id="moduleSearch" placeholder="Rechercher un module (titre ou description)..."
+                    autocomplete="off">
+            </div>
+
+            <div class="modules-grid">
+                <div id="noResults" class="no-results">
+                    <i class="fas fa-search"></i>
+                    <p>Aucun module ne correspond à votre recherche.</p>
+                </div>
+
+
+                <!-- Geographic Analysis Module -->
+                <a href="geo-analysis.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <div class="module-usage-badge"><i class="fas fa-star"></i> Nouveau</div>
+                        <h3 class="module-title">Analyse Géo-Interactive</h3>
+                        <p class="module-description">
+                            Analysez la qualité et l'évolution des coordonnées SIG.
+                            Comparez plusieurs fichiers CSV, détectez les erreurs et visualisez les progrès sur une
+                            carte.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Import Excel to DHIS2 Module -->
+                <a href="excel-import-dhis2.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon secondary">
+                            <i class="fas fa-file-import"></i>
+                        </div>
+                        <h3 class="module-title">Import Excel vers DHIS2</h3>
+                        <p class="module-description">
+                            Importez vos données Excel dans les formulaires DHIS2.
+                            Générez des modèles, mappez vos colonnes et validez vos données avant l'envoi.
+                        </p>
+                    </div>
+                </a>
+
+
+                <!-- Export Data Elements Module -->
+                <a href="export-data-elements.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon success">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <h3 class="module-title">Export Éléments de Données</h3>
+                        <p class="module-description">
+                            Exportez les éléments de données d'un ensemble de données DHIS2.
+                            Sélectionnez un formulaire et téléchargez la liste complète de ses
+                            éléments de données au format xlsx.
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- Export Data Elements + Dependencies -->
+                <a href="export-data-elements-dependencies.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon success">
+                            <i class="fas fa-file-export"></i>
+                        </div>
+                        <h3 class="module-title">Export Éléments + Dépendances</h3>
+                        <p class="module-description">
+                            Exportez des éléments de données DHIS2 avec toutes leurs dépendances.
+                            Inclut CategoryCombo, Categories, Options, Groups et GroupSets pour
+                            un import complet sur une autre instance.
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- Export CategoryCombos + Dependencies -->
+                <a href="export-category-combos.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <h3 class="module-title">Export CategoryCombos + Dépendances</h3>
+                        <p class="module-description">
+                            Exportez des CategoryCombos DHIS2 avec toutes leurs dépendances.
+                            Inclut Categories, Options, Combos, Groups et GroupSets pour
+                            une migration complète entre instances.
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- Export Forms + Dependencies -->
+                <a href="export-form-dependencies.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon success">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="module-usage-badge"><i class="fas fa-star"></i> Nouveau</div>
+                        <h3 class="module-title">Export Formulaire + Dépendances</h3>
+                        <p class="module-description">
+                            Exportez un formulaire DHIS2 avec ses éléments de données et ses combinaisons de catégories.
+                            Génère un paquet JSON prêt pour migration vers une autre instance.
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- No Group Filter (By Level) -->
+                <a href="descendant-structures-filter.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2)); color: #667eea;">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <div class="module-usage-badge"><i class="fas fa-star"></i> Nouveau</div>
+                        <h3 class="module-title">Structures sans Groupe</h3>
+                        <p class="module-description">
+                            Identifiez les unités d'organisation (ex: Aires de santé) qui ne sont rattachées à aucun groupe au sein du système.
+                            Export CSV inclus.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Advanced Structures Filter -->
+                <a href="advanced-structures-filter.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon warning" style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(245, 158, 11, 0.2)); color: #f59e0b;">
+                            <i class="fas fa-filter"></i>
+                        </div>
+                        <div class="module-usage-badge"><i class="fas fa-star"></i> Nouveau</div>
+                        <h3 class="module-title">Filtre Structures</h3>
+                        <p class="module-description">
+                            Recherchez vos unités d'organisation par niveau, par nom, et excluez celles d'un groupe spécifique.
+                            Export possible en CSV.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Export Organisation Units -->
+                <a href="export-organisation-units.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon warning">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                        <h3 class="module-title">Export Unités d'Organisation</h3>
+                        <p class="module-description">
+                            Exportez toutes les unités d'organisation DHIS2 avec leurs ancêtres et groupes.
+                            Inclut ID, nom, géométrie, hiérarchie complète et groupes d'appartenance
+                            au format Excel (XLSX).
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- Export Metadata Org Units (JSON) -->
+                <a href="export-metadata-orgunits.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon warning">
+                            <i class="fas fa-network-wired"></i>
+                        </div>
+                        <h3 class="module-title">Export Métadonnées Organisation</h3>
+                        <p class="module-description">
+                            Préparez le transfert de vos unités d'organisation, groupes et ensembles de groupes.
+                            Export JSON configurable avec sélection des champs pour import sur une autre instance.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Export Users (JSON) -->
+                <a href="export-users.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <h3 class="module-title">Export Utilisateurs</h3>
+                        <p class="module-description">
+                            Exportez les utilisateurs, groupes et rôles avec configuration avancée.
+                            Supporte l'inclusion des mots de passe (selon permissions) et des relations.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Import Org Units -->
+                <a href="import-orgunits.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon warning">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                        <h3 class="module-title">Import Unités d'Organisation</h3>
+                        <p class="module-description">
+                            Importez et mettez à jour vos unités d'organisation via Excel ou JSON.
+                            Inclus mapping et validation.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Import Users -->
+                <a href="import-users.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h3 class="module-title">Import Utilisateurs</h3>
+                        <p class="module-description">
+                            Importez des utilisateurs en masse. Supporte la création de comptes,
+                            l'assignation de rôles et groupes via Excel/JSON.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Delete Data Values Module -->
+                <a href="delete-data-values.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon warning" style="color: #ef4444; background: rgba(239, 68, 68, 0.1);">
+                            <i class="fas fa-trash-alt"></i>
+                        </div>
+                        <h3 class="module-title">Suppression DataValues</h3>
+                        <p class="module-description">
+                            Supprimez massivement des valeurs de données selon des filtres précis
+                            (période, ensemble de données, organisation).
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Data Approvals Module -->
+                <a href="data-approvals.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary" style="color: #667eea; background: rgba(102, 126, 234, 0.1);">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <h3 class="module-title">Approbation des Données</h3>
+                        <p class="module-description">
+                            Visualisez et gérez l'approbation des données DHIS2.
+                            Approuvez, désapprouvez ou annulez l'acceptation en masse par ensemble de données, unité
+                            d'organisation et période.
+                        </p>
+                    </div>
+                </a>
+
+
+                <!-- Map Visualizer Module -->
+                <a href="map-visualizer.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon success">
+                            <i class="fas fa-map-marked-alt"></i>
+                        </div>
+                        <h3 class="module-title">Visualisation Cartographique</h3>
+                        <p class="module-description">
+                            Visualisez vos unités d'organisation sur une carte interactive.
+                            Gérez plusieurs calques, affichez les noms et exportez vos cartes pour vos présentations.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Delete Tracker Records Module -->
+                <a href="delete-tracker-records.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon" style="color: #667eea; background: rgba(102, 126, 234, 0.1);">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3 class="module-title">Suppression Tracker</h3>
+                        <p class="module-description">
+                            Supprimez en masse des événements et records tracker.
+                            Nettoyage ciblé par programme et étape.
+                        </p>
+                    </div>
+                </a>
+
+                <a href="excel-mapping.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary">
+                            <i class="fas fa-table-columns"></i>
+                        </div>
+                        <h3 class="module-title">Excel Colonne Mapping</h3>
+                        <p class="module-description">
+                            Mappez automatiquement vos colonnes Excel avec l'intelligence artificielle.
+                            Utilisez l'algorithme de Levenshtein pour trouver les correspondances optimales
+                            entre vos données sources et vos dictionnaires de référence.
+                        </p>
+
+                    </div>
+                </a>
+
+                <!-- Data Analysis Module -->
+                <a href="data-analysis.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon success">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <h3 class="module-title">Import table d'une BD</h3>
+                        <p class="module-description">
+                            Importez le contenu d'une table depuis PostgreSQL ou MySQL.
+                            Sélectionnez vos colonnes, filtrez et exportez en Excel ou JSON.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Expression Calculator Module -->
+                <a href="expression-calculator.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon success">
+                            <i class="fas fa-calculator"></i>
+                        </div>
+                        <h3 class="module-title">Calculateur d'Expression DHIS2</h3>
+                        <p class="module-description">
+                            Évaluez une expression DHIS2 (#{uid}) sur une période mensuelle, trimestrielle ou annuelle,
+                            affichez les noms des éléments de données impliqués et le résultat humain.
+                        </p>
+                    </div>
+                </a>
+
+                <!-- Data Migration Module -->
+                <a href="data-migration.html" class="module-card">
+                    <div class="module-card-content">
+                        <div class="module-icon primary">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <h3 class="module-title">Migration entre Éléments de Données</h3>
+                        <p class="module-description">
+                            Migrez des données d'un élément vers un autre.
+                            Gérez le mapping des catégories et contrôlez les périodes et unités d'organisation.
+                        </p>
+                    </div>
+                </a>
+
+
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section class="stats-section">
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                Statistiques d'Utilisation
+            </h2>
+            <div id="statsGrid" class="stats-grid">
+                <!-- Stats will be loaded here -->
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-value">...</div>
+                        <div class="stat-label">Chargement des stats</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>&copy; 2025 DHIS2 Tools. Tous droits réservés.</p>
+            <p>Développé avec <i class="fas fa-heart" style="color: #f5576c;"></i> by SAW24 pour faciliter votre travail
+            </p>
+        </footer>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <!-- Zone de feedback pour les messages du serveur -->
+                <div class="auth-feedback" id="authFeedback" style="display: none;">
+                    <div class="feedback-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="feedback-content">
+                        <div class="feedback-title" id="authFeedbackTitle">Information</div>
+                        <div class="feedback-message" id="authFeedbackMessage"></div>
+                    </div>
+                    <button type="button" class="feedback-close" onclick="hideAuthFeedback()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/stats-manager.js"></script>
+    <script src="js/interaction-manager.js"></script>
+    <script>
+        // Simple toast function for index page if not present
+        if (typeof showToast === 'undefined') {
+            window.showToast = function (type, title, message) {
+                const icons = {
+                    success: 'fa-check-circle',
+                    error: 'fa-exclamation-circle',
+                    info: 'fa-info-circle'
+                };
+                const toast = $(`
+                    <div class="toast toast-${type}">
+                        <i class="fas ${icons[type]}"></i>
+                        <div class="toast-content">
+                            <div class="toast-title">${title}</div>
+                            <div class="toast-message">${message}</div>
+                        </div>
+                    </div>
+                `);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+            };
+        }
+
+        // Add smooth scroll and entrance animations
+        $(document).ready(function () {
+            // Animate cards on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver(function (entries) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observe all module cards
+            document.querySelectorAll('.module-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+
+            // Add ripple effect on card click
+            $('.module-card').on('click', function (e) {
+                if ($(this).css('pointer-events') === 'none') {
+                    e.preventDefault();
+                    return false;
+                }
+
+                const ripple = $('<div class="ripple"></div>');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+
+                ripple.css({
+                    width: size + 'px',
+                    height: size + 'px',
+                    left: x + 'px',
+                    top: y + 'px',
+                    position: 'absolute',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.3)',
+                    transform: 'scale(0)',
+                    animation: 'ripple-animation 0.6s ease-out',
+                    pointerEvents: 'none'
+                });
+
+                $(this).append(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+
+            // Module Search Logic
+            $('#moduleSearch').on('input', function () {
+                const query = $(this).val().toLowerCase().trim();
+                let visibleCount = 0;
+
+                $('.modules-grid > .module-card').each(function () {
+                    const $card = $(this);
+                    const title = $card.find('.module-title').text().toLowerCase();
+                    const description = $card.find('.module-description').text().toLowerCase();
+
+                    if (title.includes(query) || description.includes(query)) {
+                        $card.show();
+                        $card.css({
+                            'opacity': '1',
+                            'transform': 'translateY(0)'
+                        });
+                        visibleCount++;
+                    } else {
+                        $card.hide();
+                    }
+                });
+
+                // Show/hide "No results" message
+                if (visibleCount === 0) {
+                    $('#noResults').fadeIn(300);
+                } else {
+                    $('#noResults').hide();
+                }
+            });
+
+            // Add CSS for ripple animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes ripple-animation {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Load Statistics
+            async function loadStats() {
+                const result = await StatsManager.getStats();
+                if (result.success && result.data) {
+                    const $grid = $('#statsGrid');
+                    $grid.empty();
+
+                    if (result.data.length === 0) {
+                        $grid.append('<p class="text-muted">Aucune statistique disponible pour le moment.</p>');
+                        return;
+                    }
+
+                    // Extract home page visits
+                    const homeStats = result.data.find(s => s.module_path === 'index.html');
+                    const otherStats = result.data.filter(s => s.module_path !== 'index.html');
+
+                    // Global Stats Card
+                    if (homeStats) {
+                        $grid.append(`
+                            <div class="stat-card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15)); border-color: rgba(102, 126, 234, 0.4);">
+                                <div class="stat-icon" style="background: var(--primary-gradient); color: white;">
+                                    <i class="fas fa-eye"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value">${homeStats.visit_count}</div>
+                                    <div class="stat-label">Visites Totales (Site)</div>
+                                </div>
+                            </div>
+                        `);
+                    }
+
+                    // Modules Stats & Card Badges
+                    result.data.forEach(stat => {
+                        // 1. Update module card badge
+                        const $card = $(`.module-card[href="${stat.module_path}"]`);
+                        if ($card.length) {
+                            $card.find('.module-usage-badge').remove();
+                            $card.append(`
+                                <div class="module-usage-badge" title="Nombre d'utilisations">
+                                    <i class="fas fa-bolt"></i>
+                                    ${stat.visit_count}
+                                </div>
+                            `);
+                        }
+
+                        // 2. Add to bottom grid (if not home stats)
+                        if (stat.module_path !== 'index.html') {
+                            // Only show top 7 in the bottom grid to keep it clean
+                            const index = otherStats.indexOf(stat);
+                            if (index >= 0 && index < 7) {
+                                $grid.append(`
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-bolt"></i>
+                                        </div>
+                                        <div class="stat-info">
+                                            <div class="stat-value">${stat.visit_count}</div>
+                                            <div class="stat-label">${stat.module_name}</div>
+                                        </div>
+                                    </div>
+                                `);
+                            }
+                        }
+                    });
+                }
+            }
+
+            loadStats();
+        });
+    </script>
+</body>
+
+</html>

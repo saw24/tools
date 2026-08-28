@@ -1,0 +1,2531 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualiseur Cartographique DHIS2 - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        :root {
+            --sidebar-width: 380px;
+        }
+
+        body {
+            background: #0f0f23;
+            overflow: hidden;
+        }
+
+        .main-layout {
+            display: flex;
+            height: calc(100vh - 60px);
+            /* margin-top: 60px; */
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: rgba(255, 255, 255, 0.03);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+            transition: margin-left 0.3s ease, width 0.3s ease;
+        }
+
+        .sidebar.hidden {
+            margin-left: calc(var(--sidebar-width) * -1);
+        }
+
+        /* Toggle Sidebar Button */
+        .toggle-sidebar-btn {
+            position: absolute;
+            left: 100%;
+            top: 20px;
+            background: #1a1a2e;
+            border: 1px solid var(--border-color);
+            border-left: none;
+            color: white;
+            padding: 10px 8px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: #252545;
+            padding-left: 12px;
+        }
+
+        /* Responsive Sidebar */
+        @media (max-width: 768px) {
+            :root {
+                --sidebar-width: 320px;
+            }
+
+            .main-layout {
+                position: relative;
+            }
+
+            .sidebar {
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                z-index: 2000;
+                background: #1a1a2e;
+                /* Solid background on mobile */
+                box-shadow: 10px 0 25px rgba(0, 0, 0, 0.5);
+            }
+
+            .sidebar.hidden {
+                margin-left: calc(var(--sidebar-width) * -1);
+            }
+
+            .toggle-sidebar-btn {
+                left: 100%;
+                top: 80px;
+            }
+
+            #legend {
+                bottom: 80px;
+                right: 15px;
+                min-width: 150px;
+                padding: 10px;
+            }
+
+            .export-modal {
+                width: 95% !important;
+                margin: 0 10px;
+                padding: 20px;
+            }
+
+            .top-bar-left span {
+                display: none;
+                /* Hide breadcrumbs on small mobile */
+            }
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Map Styling */
+        .map-container-wrapper {
+            flex: 1;
+            position: relative;
+            background: #1a1a2e;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background: #e5e7eb;
+            /* Fond gris clair type Google Maps */
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Title Overlay */
+        #mapTitle {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: #ffffff;
+            padding: 10px 25px;
+            border-radius: 30px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: #1a1a2e;
+            font-weight: 700;
+            font-size: 18px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            cursor: move;
+        }
+
+        #northArrow {
+            position: absolute;
+            top: 80px;
+            right: 30px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            cursor: move;
+            color: #1a1a2e;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #northArrow i {
+            font-size: 30px;
+        }
+
+        #northArrow span {
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: -5px;
+        }
+
+        #mapSource {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            color: #1a1a2e;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            display: none;
+            cursor: move;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        /* Layer Item Styling */
+        .layer-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .layer-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(102, 126, 234, 0.4);
+        }
+
+        .layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .layer-title {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .layer-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .layer-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .layer-btn:hover {
+            color: white;
+        }
+
+        .layer-btn.toggle-visible.active {
+            color: #667eea;
+        }
+
+        .layer-details {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .layer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .layer-style-settings {
+            display: none;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .style-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .style-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .style-item label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .input-mini {
+            padding: 4px 8px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: white;
+            width: 100%;
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        /* Floating Legend */
+        #legend {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            padding: 18px;
+            min-width: 240px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: none;
+            color: #1a1a2e;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .legend-header {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            color: #1a1a2e;
+            letter-spacing: -0.01em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .legend-icon img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Tree View */
+        .org-unit-tree {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            margin-top: 5px;
+            font-size: 13px;
+        }
+
+        .tree-ul {
+            list-style: none;
+            padding-left: 15px;
+            margin: 0;
+        }
+
+        .tree-ul.root-ul {
+            padding-left: 0;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 3px 6px;
+            cursor: pointer;
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        .tree-node-content:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .tree-node-content.selected {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            color: white;
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: white;
+        }
+
+        /* Label on map */
+        .ou-label {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #1a1a2e;
+            font-weight: 700;
+            font-size: 12px;
+            white-space: nowrap;
+            cursor: move;
+            z-index: 1000;
+        }
+
+        /* Export Overlay */
+        .export-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .export-modal {
+            background: #1a1a2e;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            width: 500px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Custom Popup */
+        .leaflet-popup-content-wrapper {
+            background: white !important;
+            color: #333 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        .leaflet-popup-tip {
+            background: white !important;
+        }
+
+        .popup-details {
+            font-size: 13px;
+        }
+
+        .popup-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 8px;
+            color: #4f46e5;
+        }
+
+        .loader-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 15, 35, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(2px);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> DHIS2 Tools
+            </a>
+            <span style="color: var(--text-muted); margin: 0 10px;">/</span>
+            <span style="font-weight: 600;">Visualiseur Cartographique</span>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">...</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <button class="toggle-sidebar-btn" onclick="toggleSidebar()" title="Masquer/Afficher la barre latérale">
+                <i class="fas fa-chevron-left" id="toggleIcon"></i>
+            </button>
+            <div class="sidebar-header">
+                <h2><i class="fas fa-layer-group"></i> Calques & Filtres</h2>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Map Configuration -->
+                <div class="form-group">
+                    <label class="form-label">Titre de la carte</label>
+                    <input type="text" id="inputTitle" class="form-input" placeholder="Titre à afficher sur la carte..."
+                        oninput="updateMapTitle()">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Fond de carte</label>
+                    <select id="selectBasemap" class="form-select" onchange="changeBasemap()">
+                        <option value="osm">OpenStreetMap (Standard)</option>
+                        <option value="satellite">Satellite (Esri)</option>
+                        <option value="dark">Carto Dark (Sombre)</option>
+                        <option value="none">Aucun (Transparent)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Source des données</label>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="inputSource" class="form-input" placeholder="Ex: SIG / DHIS2 2025"
+                            oninput="updateMapSource()">
+                        <button class="btn btn-outline" style="padding: 10px; min-width: 45px; justify-content: center;"
+                            onclick="toggleSourceDisplay()" title="Afficher/Masquer la source">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                    <label class="form-label" style="margin-bottom: 0;">Légende & Nord</label>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;"
+                            onclick="toggleLegendDisplay()" title="Afficher/Masquer la légende">
+                            <i class="fas fa-list-ul"></i>
+                        </button>
+                        <button class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;"
+                            onclick="toggleNorthArrow()" title="Afficher/Masquer la flèche Nord">
+                            <i class="fas fa-compass"></i>
+                        </button>
+                        <button class="btn btn-outline" id="btnToggleCoords" style="padding: 5px 10px; font-size: 12px;"
+                            onclick="toggleCoordinateDisplay()" title="Afficher/Masquer les coordonnées">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="btn btn-outline" style="padding: 8px; font-size: 11px; justify-content: center;"
+                        onclick="saveProject()">
+                        <i class="fas fa-save"></i> Sauvegarder
+                    </button>
+                    <button class="btn btn-outline" style="padding: 8px; font-size: 11px; justify-content: center;"
+                        onclick="$('#projectFileInput').click()">
+                        <i class="fas fa-folder-open"></i> Charger
+                    </button>
+                    <input type="file" id="projectFileInput" style="display: none;" accept=".dmap"
+                        onchange="loadProject(this)">
+                </div>
+
+                <div style="margin: 20px 0; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                    <h3
+                        style="font-size: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Mes Calques</span>
+                        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;"
+                            onclick="openAddLayerModal()">
+                            <i class="fas fa-plus"></i> Nouveau
+                        </button>
+                    </h3>
+
+                    <div id="layersList">
+                        <!-- Layers will be added here -->
+                        <div id="emptyLayersNote"
+                            style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px;">
+                            <i class="fas fa-map-marked-alt"
+                                style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                            Aucun calque ajouté.<br>Cliquez sur "Nouveau" pour commencer.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: auto; padding-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="exportMap()">
+                        <i class="fas fa-file-image"></i> Image (PNG)
+                    </button>
+                    <button class="btn btn-primary" style="width: 100%; justify-content: center; background: #6366f1;"
+                        onclick="exportMapGPKG()">
+                        <i class="fas fa-database"></i> SIG (GPKG / GeoJSON)
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Area -->
+        <main class="map-container-wrapper">
+            <div id="mapTitle">Titre de la carte</div>
+
+            <div id="map"></div>
+
+            <div id="northArrow">
+                <i class="fas fa-long-arrow-alt-up"></i>
+                <span>N</span>
+            </div>
+
+            <div id="mapSource">Source: -</div>
+
+            <div id="legend">
+                <div class="legend-header">
+                    <span><i class="fas fa-list-ul" style="margin-right: 8px; color: #6366f1;"></i> Légende</span>
+                    <button class="btn-icon" onclick="toggleLegendDisplay()"
+                        style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="legendContent">
+                    <!-- Legend items -->
+                </div>
+            </div>
+
+            <!-- Coordinate Info -->
+            <div id="coordDisplay"
+                style="position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 4px; font-size: 11px; color: white;">
+                Coords: <span id="currentCoords">-</span>
+                <span id="coordCopied" style="display: none; color: #10b981; margin-left:10px;"><i
+                        class="fas fa-check"></i> Copié !</span>
+            </div>
+
+            <div class="loader-overlay" id="mapLoader">
+                <div
+                    style="text-align: center; width: 80%; max-width: 400px; background: rgba(26, 26, 46, 0.9); padding: 30px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                    <div class="spinner" style="margin: 0 auto 20px;"></div>
+                    <p id="loaderMessage" style="margin-top: 10px; font-weight: 600; font-size: 16px; color: white;">
+                        Chargement des données...</p>
+                    <div id="loaderProgressContainer"
+                        style="display: none; width: 100%; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; margin-top: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                        <div id="loaderProgressBar"
+                            style="width: 0%; background: var(--primary-gradient); height: 100%; transition: width 0.3s ease; box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);">
+                        </div>
+                    </div>
+                    <div id="loaderStatus"
+                        style="display: none; font-size: 11px; color: var(--text-muted); margin-top: 8px; text-transform: uppercase; letter-spacing: 1px;">
+                        0%</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Layer Modal -->
+    <div class="export-overlay" id="addLayerModal">
+        <div class="export-modal" style="width: 600px;">
+            <div class="sidebar-header" style="border:none; padding: 0 0 20px 0;">
+                <h2 style="font-size: 20px;" id="modalLayerTitle"><i class="fas fa-plus-circle"></i> Ajouter un nouveau
+                    calque</h2>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nom du calque</label>
+                <input type="text" id="layerNameInput" class="form-input" placeholder="Ex: Centres de Santé">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Source de données</label>
+                <select id="sourceTypeInput" class="form-select" onchange="toggleSourceFields()">
+                    <option value="dhis2">DHIS2 (Organisation Units)</option>
+                    <option value="file">Fichier Local (GeoJSON, JSON, CSV)</option>
+                </select>
+            </div>
+
+            <!-- DHIS2 Fields -->
+            <div id="sourceFields_dhis2">
+                <div class="form-group">
+                    <label class="form-label">Unité d'organisation parente</label>
+                    <input type="text" id="parentNameDisplay" class="form-input"
+                        placeholder="Sélectionnez dans l'arbre ci-dessous..." readonly>
+                    <input type="hidden" id="parentIdInput">
+                    <div id="orgUnitTreeContainer" class="org-unit-tree">
+                        <!-- Tree will be loaded here -->
+                        <div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i>
+                            Chargement...
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;">
+                        <input type="checkbox" id="includeDescendantsCheck" style="width: 18px; height: 18px;"
+                            onchange="toggleGroupsVisibility()">
+                        Inclure la descendance
+                    </label>
+                </div>
+
+                <div class="form-group" id="groupFilterField" style="display: none;">
+                    <label class="form-label">Sélectionner un groupe (Recommandé)</label>
+                    <select id="groupSelectInput" class="form-select">
+                        <option value="">Aucun</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- File Fields -->
+            <div id="sourceFields_file" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">Sélectionner un fichier</label>
+                    <input type="file" id="layerFileInput" class="form-input" accept=".geojson,.json,.csv">
+                    <small class="text-muted" style="font-size: 11px;">Formats supportés: .geojson, .json, .csv</small>
+                </div>
+
+                <div id="csvOptions"
+                    style="display: none; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="font-size: 12px; font-weight: 600; margin-bottom: 10px; color: #667eea;">Configuration CSV
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11px;">Colonne Latitude</label>
+                            <select id="csvLatCol" class="form-select" style="padding: 6px; font-size: 12px;"></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="font-size: 11px;">Colonne Longitude</label>
+                            <select id="csvLngCol" class="form-select" style="padding: 6px; font-size: 12px;"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Icône du calque (Optionnel)</label>
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="iconUrlInput" class="form-input"
+                            placeholder="URL de l'image (ex: https://...)" style="flex: 1;">
+                        <label class="btn btn-outline"
+                            style="padding: 10px; margin: 0; min-width: 45px; justify-content: center;">
+                            <i class="fas fa-upload"></i>
+                            <input type="file" id="iconFileInput" accept="image/*" style="display: none;"
+                                onchange="handleLocalIcon(this)">
+                        </label>
+                    </div>
+                    <div id="iconPreviewContainer"
+                        style="display: none; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;">
+                        <img id="iconPreviewImg" src="" style="width: 24px; height: 24px; object-fit: contain;">
+                        <span
+                            style="font-size: 11px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                            id="iconFileName">Image locale</span>
+                        <button class="btn-icon" onclick="clearIconSelection()"
+                            style="background:none; border:none; color:#ef4444; cursor:pointer;"><i
+                                class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <small class="text-muted" style="font-size: 11px;">Utilisez une URL ou téléchargez une image
+                    locale.</small>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="closeAddLayerModal()">Annuler</button>
+                <button class="btn btn-primary" id="btnSaveLayer" onclick="saveLayer()">
+                    <i class="fas fa-check"></i> Créer le calque
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <!-- Normal Auth UI -->
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="auth-modal-body">
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label>URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label>Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label>Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">Se connecter</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- html2canvas for export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- CSV Parser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        // Global variables
+        let map;
+        let layers = [];
+        let basemaps = {};
+        let currentBasemap = null;
+        let treeLoaded = false;
+        let groupsLoaded = false;
+        let editingLayerId = null; // Track which layer is being edited
+
+        $(document).ready(function () {
+            initApp();
+        });
+
+        function initApp() {
+            // Check session
+            if (dhis2Session.isConnected()) {
+                const config = dhis2Session.getConfig();
+                $('#dhis2User').text(config.username || 'Utilisateur');
+                $('#dhis2Url').text(config.url.replace(/^https?:\/\//, ''));
+                $('#dhis2Status').show();
+                $('#btnDHIS2Connect').hide();
+                loadTree();
+                loadGroups();
+            } else {
+                showToast('info', 'Identification', 'Veuillez vous connecter pour utiliser le module.');
+            }
+
+            // Init Map
+            initMap();
+
+            // Responsive: hide sidebar on small screens
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+
+            if (map) {
+                // Interaction: click anywhere on map to copy coords
+                map.on('click', function (e) {
+                    const lat = e.latlng.lat.toFixed(6);
+                    const lng = e.latlng.lng.toFixed(6);
+                    $('#currentCoords').text(`${lat}, ${lng}`);
+                });
+
+                map.on('mousemove', function (e) {
+                    const lat = e.latlng.lat.toFixed(6);
+                    const lng = e.latlng.lng.toFixed(6);
+                    $('#currentCoords').text(`${lat}, ${lng}`);
+                });
+
+                // Double click to copy coords
+                map.on('dblclick', function (e) {
+                    const lat = e.latlng.lat.toFixed(6);
+                    const lng = e.latlng.lng.toFixed(6);
+                    const txt = `${lat}, ${lng}`;
+                    copyToClipboard(txt);
+                    $('#coordCopied').fadeIn().delay(2000).fadeOut();
+                });
+
+                // Force refresh on window resize
+                $(window).on('resize', function () {
+                    map.invalidateSize();
+                });
+
+                // Final check to ensure size is correct after initial load
+                setTimeout(() => map.invalidateSize(), 500);
+            }
+
+            // Make elements draggable
+            makeDraggable(document.getElementById("legend"));
+            makeDraggable(document.getElementById("mapTitle"));
+            makeDraggable(document.getElementById("northArrow"));
+            makeDraggable(document.getElementById("mapSource"));
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const icon = document.getElementById('toggleIcon');
+            sidebar.classList.toggle('hidden');
+
+            if (sidebar.classList.contains('hidden')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
+            }
+
+            // Re-render map size after transition
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 300);
+        }
+
+        function handleLocalIcon(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#iconPreviewImg').attr('src', e.target.result);
+                    $('#iconUrlInput').val(e.target.result); // Store base64 in the URL input
+                    $('#iconPreviewContainer').css('display', 'flex');
+                    $('#iconFileName').text(input.files[0].name);
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function clearIconSelection() {
+            $('#iconUrlInput').val('');
+            $('#iconFileInput').val('');
+            $('#iconPreviewContainer').hide();
+        }
+
+        function initMap() {
+            try {
+                // Fix default icons path
+                delete L.Icon.Default.prototype._getIconUrl;
+                L.Icon.Default.mergeOptions({
+                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                });
+
+                const mapContainer = document.getElementById('map');
+                if (!mapContainer) {
+                    console.error("Conteneur de carte '#map' non trouvé.");
+                    return;
+                }
+
+                map = L.map('map', {
+                    doubleClickZoom: false, // Disabled to handle custom dblclick
+                    zoomSnap: 0.1,
+                    zoomDelta: 1, // Standard delta for buttons
+                    wheelPxPerZoomLevel: 60, // Smooth mouse scrolling
+                    preferCanvas: true // Significant improvement for export/heavy maps
+                }).setView([0, 0], 2);
+
+                basemaps = {
+                    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap'
+                    }),
+                    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles © Esri'
+                    }),
+                    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: '© CartoDB',
+                        subdomains: 'abcd',
+                        maxZoom: 20
+                    })
+                };
+
+                basemaps.osm.addTo(map);
+                currentBasemap = basemaps.osm;
+            } catch (e) {
+                console.error("Erreur initialisation Leaflet:", e);
+            }
+        }
+
+        function changeBasemap() {
+            const val = $('#selectBasemap').val();
+
+            if (currentBasemap) map.removeLayer(currentBasemap);
+
+            if (val === 'none') {
+                currentBasemap = null;
+            } else {
+                currentBasemap = basemaps[val];
+                currentBasemap.addTo(map);
+            }
+        }
+
+        function updateMapTitle() {
+            const val = $('#inputTitle').val().trim();
+            if (val) {
+                $('#mapTitle').text(val).show();
+            } else {
+                $('#mapTitle').hide();
+            }
+        }
+
+        function updateMapSource() {
+            const val = $('#inputSource').val().trim();
+            if (val) {
+                $('#mapSource').text('Source: ' + val);
+            }
+        }
+
+        function toggleSourceDisplay() {
+            const $source = $('#mapSource');
+            if ($source.is(':visible')) {
+                $source.fadeOut();
+            } else {
+                if ($('#inputSource').val().trim()) {
+                    $source.fadeIn();
+                } else {
+                    showToast('info', 'Note', 'Veuillez d\'abord saisir une source.');
+                }
+            }
+        }
+
+        // --- Layer Management ---
+
+        function toggleSourceFields() {
+            const type = $('#sourceTypeInput').val();
+            $('[id^="sourceFields_"]').hide();
+            $(`#sourceFields_${type}`).show();
+        }
+
+        function toggleGroupsVisibility() {
+            if ($('#includeDescendantsCheck').is(':checked')) {
+                $('#groupFilterField').slideDown();
+            } else {
+                $('#groupFilterField').slideUp();
+                $('#groupSelectInput').val(''); // Reset if hidden
+            }
+        }
+
+        // Listener for file input to handle CSV columns
+        $(document).on('change', '#layerFileInput', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.name.toLowerCase().endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true,
+                    preview: 1,
+                    complete: function (results) {
+                        if (results.data && results.data.length > 0) {
+                            const cols = Object.keys(results.data[0]);
+                            const $latSelect = $('#csvLatCol');
+                            const $lngSelect = $('#csvLngCol');
+                            $latSelect.empty();
+                            $lngSelect.empty();
+
+                            cols.forEach(col => {
+                                $latSelect.append(`<option value="${col}">${col}</option>`);
+                                $lngSelect.append(`<option value="${col}">${col}</option>`);
+                            });
+
+                            // Auto-detect
+                            const latMatch = cols.find(c => /lat/i.test(c));
+                            const lngMatch = cols.find(c => /lon|lng|long/i.test(c));
+                            if (latMatch) $latSelect.val(latMatch);
+                            if (lngMatch) $lngSelect.val(lngMatch);
+
+                            $('#csvOptions').slideDown();
+                        }
+                    }
+                });
+            } else {
+                $('#csvOptions').slideUp();
+            }
+        });
+
+        function openAddLayerModal(layerId = null) {
+            editingLayerId = layerId;
+            const $modal = $('#addLayerModal');
+            const $title = $('#modalLayerTitle');
+            const $btn = $('#btnSaveLayer');
+
+            // Reset modal
+            $('#csvOptions').hide();
+            $('#layerFileInput').val('');
+
+            if (!layerId) {
+                $title.html('<i class="fas fa-plus-circle"></i> Ajouter un nouveau calque');
+                $btn.html('<i class="fas fa-check"></i> Créer le calque');
+                $('#layerNameInput').val('');
+                $('#sourceTypeInput').val('dhis2').trigger('change');
+                $('#parentIdInput').val('');
+                $('#parentNameDisplay').val('');
+                $('#includeDescendantsCheck').prop('checked', false);
+                toggleGroupsVisibility();
+                $('#groupSelectInput').val('');
+                clearIconSelection();
+            } else {
+                const layer = layers.find(l => l.id === layerId);
+                $title.html('<i class="fas fa-edit"></i> Modifier le calque');
+                $btn.html('<i class="fas fa-save"></i> Enregistrer les modifications');
+
+                $('#layerNameInput').val(layer.name);
+                $('#sourceTypeInput').val(layer.source || 'dhis2').trigger('change');
+                $('#iconUrlInput').val(layer.config.iconUrl);
+
+                if (layer.source === 'dhis2' || !layer.source) {
+                    $('#parentIdInput').val(layer.config.parentId);
+                    $('#parentNameDisplay').val(layer.config.parentName);
+                    $('#includeDescendantsCheck').prop('checked', layer.config.includeDescendants);
+                    toggleGroupsVisibility();
+
+                    // Handle async group loading
+                    if (groupsLoaded) {
+                        $('#groupSelectInput').val(layer.config.groupId);
+                    } else {
+                        loadGroups().then(() => {
+                            $('#groupSelectInput').val(layer.config.groupId);
+                        });
+                    }
+                }
+
+                if (layer.config.iconUrl) {
+                    $('#iconPreviewImg').attr('src', layer.config.iconUrl);
+                    $('#iconPreviewContainer').css('display', 'flex');
+                } else {
+                    clearIconSelection();
+                }
+            }
+
+            $modal.css('display', 'flex');
+            if ($('#sourceTypeInput').val() === 'dhis2') {
+                if (!treeLoaded) loadTree();
+                if (!groupsLoaded && !layerId) loadGroups(); // Only load if not already loading via the promise above
+            }
+        }
+
+        function closeAddLayerModal() {
+            $('#addLayerModal').hide();
+        }
+
+        function setLoaderProgress(percent, message) {
+            const $container = $('#loaderProgressContainer');
+            const $bar = $('#loaderProgressBar');
+            const $status = $('#loaderStatus');
+            const $msg = $('#loaderMessage');
+
+            if (percent !== null) {
+                $container.show();
+                $status.show();
+                $bar.css('width', percent + '%');
+                $status.text(Math.round(percent) + '%');
+            } else {
+                $container.hide();
+                $status.hide();
+            }
+
+            if (message) {
+                $msg.text(message);
+            }
+        }
+
+        async function saveLayer() {
+            const $btn = $('#btnSaveLayer');
+            if ($btn.prop('disabled')) return;
+
+            const source = $('#sourceTypeInput').val();
+            if (source === 'dhis2') {
+                if (!dhis2Session.isConnected()) {
+                    showToast('error', 'Erreur', 'Veuillez vous connecter à DHIS2 d\'abord.');
+                    return;
+                }
+
+                // Check if descendants are included and group is mandatory
+                const includeDescendants = $('#includeDescendantsCheck').is(':checked');
+                const groupId = $('#groupSelectInput').val();
+                if (includeDescendants && !groupId) {
+                    showToast('warning', 'Groupe requis', 'Le choix d\'un groupe est obligatoire lorsque vous incluez la descendance pour éviter une surcharge et séparer les géométries.');
+                    return;
+                }
+
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Traitement...');
+                try {
+                    if (editingLayerId) await updateExistingLayer();
+                    else await createNewLayer();
+                } finally {
+                    $btn.prop('disabled', false).html('<i class="fas fa-check"></i> ' + (editingLayerId ? 'Mettre à jour' : 'Créer le calque'));
+                }
+            } else {
+                // For files, creation and update are handled together for simplicity
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Traitement...');
+                try {
+                    await processFileLayer();
+                } finally {
+                    $btn.prop('disabled', false).html('<i class="fas fa-check"></i> ' + (editingLayerId ? 'Mettre à jour' : 'Créer le calque'));
+                }
+            }
+        }
+
+        async function processFileLayer() {
+            const name = $('#layerNameInput').val().trim();
+            const iconUrl = $('#iconUrlInput').val().trim();
+            const fileInput = document.getElementById('layerFileInput');
+            const file = fileInput.files[0];
+
+            if (!name) {
+                showToast('warning', 'Champs requis', 'Veuillez nommer le calque.');
+                return;
+            }
+
+            // If updating without changing file
+            if (editingLayerId && !file) {
+                const layer = layers.find(l => l.id === editingLayerId);
+                layer.name = name;
+                layer.config.iconUrl = iconUrl;
+                layer.source = 'file'; // Ensure source is updated if switched
+
+                // Refresh rendering to apply potential icon change
+                layer.leafletLayer.clearLayers();
+                layer.labelLayer.clearLayers();
+                addFeaturesToLayer(layer);
+
+                renderLayersList();
+                updateLegend();
+                closeAddLayerModal();
+                return;
+            }
+
+            if (!file) {
+                showToast('warning', 'Fichier requis', 'Veuillez sélectionner un fichier.');
+                return;
+            }
+
+            $('#mapLoader').css('display', 'flex');
+            setLoaderProgress(20, 'Lecture du fichier...');
+
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const content = e.target.result;
+                    let features = [];
+
+                    if (file.name.toLowerCase().endsWith('.csv')) {
+                        const results = Papa.parse(content, { header: true, skipEmptyLines: true });
+                        const latCol = $('#csvLatCol').val();
+                        const lngCol = $('#csvLngCol').val();
+
+                        features = results.data.filter(row => row[latCol] && row[lngCol]).map((row, idx) => ({
+                            id: 'csv_' + idx,
+                            name: row.name || row.label || row.displayName || ('Point ' + idx),
+                            geometry: {
+                                type: 'Point',
+                                coordinates: [parseFloat(row[lngCol]), parseFloat(row[latCol])]
+                            },
+                            groups: [],
+                            properties: row
+                        }));
+                    } else {
+                        // JSON / GeoJSON
+                        const json = JSON.parse(content);
+                        if (json.type === 'FeatureCollection') {
+                            features = json.features.map(f => ({
+                                id: f.id || 'f_' + Math.random(),
+                                name: f.properties.name || f.properties.displayName || 'Feature',
+                                geometry: f.geometry,
+                                groups: [],
+                                properties: f.properties
+                            }));
+                        } else if (Array.isArray(json)) {
+                            // Simple array of objects with geometry
+                            features = json.filter(i => i.geometry).map(i => ({
+                                id: i.id || 'i_' + Math.random(),
+                                name: i.name || 'Item',
+                                geometry: i.geometry,
+                                groups: [],
+                                properties: i
+                            }));
+                        }
+                    }
+
+                    if (features.length === 0) throw new Error("Aucune donnée géographique valide trouvée.");
+
+                    // Detect geometry type(s)
+                    const geomTypes = new Set(features.map(f => f.geometry.type));
+                    const isMixed = (geomTypes.has('Point') && (geomTypes.has('Polygon') || geomTypes.has('MultiPolygon')));
+
+                    if (isMixed) {
+                        const confirmLoad = confirm("Ce fichier contient des types de géométrie mixtes (Points et Polygones). \n\nLa recommandation SIG préconise une géométrie unique par couche. Voulez-vous continuer ?");
+                        if (!confirmLoad) {
+                            $('#mapLoader').hide();
+                            return;
+                        }
+                    }
+
+                    // Determine primary geometry type for styling
+                    const primaryType = geomTypes.has('Polygon') || geomTypes.has('MultiPolygon') ? 'Polygon' : 'Point';
+                    const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+
+                    if (editingLayerId) {
+                        const layer = layers.find(l => l.id === editingLayerId);
+                        layer.name = name;
+                        layer.config = { iconUrl, fileName: file.name };
+                        layer.data = features;
+                        layer.geomType = primaryType;
+                        layer.source = 'file'; // Update source
+                        layer.leafletLayer.clearLayers();
+                        layer.labelLayer.clearLayers();
+                        addFeaturesToLayer(layer);
+                    } else {
+                        const layerId = 'layer_' + Date.now();
+                        const newLayer = {
+                            id: layerId,
+                            name: name,
+                            source: 'file',
+                            geomType: primaryType,
+                            config: { iconUrl, fileName: file.name },
+                            style: {
+                                strokeColor: randomColor,
+                                strokeWidth: 2,
+                                // For points, fill is same as stroke for solid look
+                                fillColor: primaryType === 'Point' ? randomColor : randomColor,
+                                // For polygons, default font transparent (0)
+                                fillOpacity: primaryType === 'Point' ? 1 : 0,
+                                labelColor: '#1a1a2e',
+                                labelSize: 12
+                            },
+                            data: features,
+                            visible: true,
+                            showLabels: false,
+                            leafletLayer: L.layerGroup(),
+                            labelLayer: L.layerGroup()
+                        };
+                        addFeaturesToLayer(newLayer);
+                        layers.push(newLayer);
+                    }
+
+                    renderLayersList();
+                    updateLegend();
+                    if (map) refreshMapLayers();
+                    closeAddLayerModal();
+
+                    // Zoom to layer
+                    if (map) {
+                        map.invalidateSize();
+                        const targetLayer = editingLayerId ? layers.find(l => l.id === editingLayerId) : layers[layers.length - 1];
+                        const bounds = L.featureGroup(targetLayer.leafletLayer.getLayers()).getBounds();
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+                        }
+                    }
+
+                    showToast('success', 'Succès', `${features.length} éléments chargés depuis le fichier.`);
+                } catch (err) {
+                    showToast('error', 'Erreur de lecture', err.message);
+                } finally {
+                    $('#mapLoader').hide();
+                    setLoaderProgress(null);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function createNewLayer() {
+            const name = $('#layerNameInput').val().trim();
+            const parentId = $('#parentIdInput').val();
+            const parentName = $('#parentNameDisplay').val();
+            const includeDescendants = $('#includeDescendantsCheck').is(':checked');
+            const groupId = $('#groupSelectInput').val();
+            const groupName = $('#groupSelectInput option:selected').text();
+            const iconUrl = $('#iconUrlInput').val().trim();
+
+            if (!name || !parentId) {
+                showToast('warning', 'Champs requis', 'Veuillez nommer le calque et sélectionner une unité.');
+                return;
+            }
+
+            $('#mapLoader').css('display', 'flex');
+            setLoaderProgress(10, 'Connexion à DHIS2...');
+
+            try {
+                const config = dhis2Session.getConfig();
+                setLoaderProgress(30, 'Récupération des données géographiques...');
+
+                const response = await $.ajax({
+                    url: 'api/map-visualizer.php?action=fetch_layer',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        dhis2_url: config.url,
+                        dhis2_auth: config.authHeader,
+                        parentId: parentId,
+                        includeDescendants: includeDescendants,
+                        groupId: groupId
+                    })
+                });
+
+                if (response.success) {
+                    setLoaderProgress(70, 'Traitement des géométries...');
+                    const features = response.data.features;
+                    const geomTypes = new Set(features.map(f => f.geometry.type));
+                    const primaryType = geomTypes.has('Polygon') || geomTypes.has('MultiPolygon') ? 'Polygon' : 'Point';
+
+                    const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+                    const layerId = 'layer_' + Date.now();
+                    const newLayer = {
+                        id: layerId,
+                        name: name,
+                        source: 'dhis2',
+                        geomType: primaryType,
+                        config: { parentId, parentName, includeDescendants, groupId, groupName, iconUrl },
+                        style: {
+                            strokeColor: randomColor,
+                            strokeWidth: 2,
+                            fillColor: randomColor,
+                            fillOpacity: primaryType === 'Point' ? 1 : 0,
+                            labelColor: '#1a1a2e',
+                            labelSize: 12
+                        },
+                        data: features,
+                        visible: true,
+                        showLabels: false,
+                        leafletLayer: L.layerGroup(),
+                        labelLayer: L.layerGroup()
+                    };
+
+                    setLoaderProgress(85, 'Ajout des éléments sur la carte...');
+                    layers.push(newLayer); // Push before adding features so labels can be calculated correctly
+                    addFeaturesToLayer(newLayer);
+
+                    setLoaderProgress(95, 'Finalisation...');
+                    renderLayersList();
+                    updateLegend();
+                    if (map) refreshMapLayers();
+
+                    // Zoom to layer
+                    if (map) {
+                        map.invalidateSize();
+                        const bounds = L.featureGroup(newLayer.leafletLayer.getLayers()).getBounds();
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds, { padding: [50, 50] });
+                        }
+                    }
+
+                    closeAddLayerModal();
+                    // Reset modal
+                    $('#layerNameInput').val('');
+                    showToast('success', 'Calque ajouté', `${response.data.total} unités trouvées.`);
+                } else {
+                    throw new Error(response.message);
+                }
+            } catch (error) {
+                showToast('error', 'Erreur', 'Impossible de charger les données: ' + error.message);
+            } finally {
+                $('#mapLoader').hide();
+                setLoaderProgress(null);
+            }
+        }
+
+        async function updateExistingLayer() {
+            const layer = layers.find(l => l.id === editingLayerId);
+            if (!layer) return;
+
+            const name = $('#layerNameInput').val().trim();
+            const parentId = $('#parentIdInput').val();
+            const parentName = $('#parentNameDisplay').val();
+            const includeDescendants = $('#includeDescendantsCheck').is(':checked');
+            const groupId = $('#groupSelectInput').val();
+            const groupName = $('#groupSelectInput option:selected').text();
+            const iconUrl = $('#iconUrlInput').val().trim();
+
+            if (!name || !parentId) {
+                showToast('warning', 'Champs requis', 'Veuillez nommer le calque et sélectionner une unité.');
+                return;
+            }
+
+            $('#mapLoader').css('display', 'flex');
+            setLoaderProgress(10, 'Connexion à DHIS2...');
+
+            try {
+                const config = dhis2Session.getConfig();
+                setLoaderProgress(30, 'Mise à jour des données géographiques...');
+
+                const response = await $.ajax({
+                    url: 'api/map-visualizer.php?action=fetch_layer',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        dhis2_url: config.url,
+                        dhis2_auth: config.authHeader,
+                        parentId: parentId,
+                        includeDescendants: includeDescendants,
+                        groupId: groupId
+                    })
+                });
+
+                if (response.success) {
+                    setLoaderProgress(70, 'Traitement des géométries...');
+                    const features = response.data.features;
+                    const geomTypes = new Set(features.map(f => f.geometry.type));
+                    const primaryType = geomTypes.has('Polygon') || geomTypes.has('MultiPolygon') ? 'Polygon' : 'Point';
+
+                    // Update layer object
+                    layer.name = name;
+                    layer.geomType = primaryType;
+                    layer.source = 'dhis2'; // Update source
+                    layer.config = { parentId, parentName, includeDescendants, groupId, groupName, iconUrl };
+                    layer.data = features;
+
+                    // Refresh rendering
+                    setLoaderProgress(85, 'Mise à jour des éléments sur la carte...');
+                    layer.leafletLayer.clearLayers();
+                    layer.labelLayer.clearLayers();
+                    addFeaturesToLayer(layer);
+
+                    setLoaderProgress(95, 'Finalisation...');
+                    renderLayersList();
+                    updateLegend();
+
+                    closeAddLayerModal();
+                    showToast('success', 'Calque mis à jour', `${response.data.total} unités trouvées.`);
+                } else {
+                    throw new Error(response.message);
+                }
+            } catch (error) {
+                showToast('error', 'Erreur', 'Impossible de mettre à jour le calque: ' + error.message);
+            } finally {
+                $('#mapLoader').hide();
+                setLoaderProgress(null);
+            }
+        }
+
+        let labelCollisionMap = {};
+
+        function rebuildAllLabels() {
+            if (!map) return;
+
+            labelCollisionMap = {};
+            layers.forEach(layer => {
+                layer.labelLayer.clearLayers();
+                if (layer.visible && layer.showLabels) {
+                    addLabelsToLayer(layer);
+                }
+            });
+        }
+
+        function addLabelsToLayer(layer) {
+            layer.data.forEach(feature => {
+                let labelPos = null;
+                const coords = feature.geometry.coordinates;
+                const geomType = feature.geometry.type;
+
+                try {
+                    if (geomType === 'Point') {
+                        labelPos = [coords[1], coords[0]];
+                    } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                        const tempLayer = L.geoJSON({
+                            type: "Feature",
+                            geometry: feature.geometry
+                        });
+                        const bounds = tempLayer.getBounds();
+                        if (bounds.isValid()) {
+                            const center = bounds.getCenter();
+                            labelPos = [center.lat, center.lng];
+                        }
+                    }
+                } catch (e) {
+                    return;
+                }
+
+                if (labelPos) {
+                    // Manual position priority
+                    const finalPos = feature.customLabelPos || labelPos;
+
+                    // Auto-collision offset ONLY if no manual position exists
+                    let yOffset = 0;
+                    if (!feature.customLabelPos) {
+                        // Collision detection: use rounded coordinates as grid key
+                        const gridRes = 5; // ~1.1m precision
+                        const key = `${parseFloat(labelPos[0]).toFixed(gridRes)},${parseFloat(labelPos[1]).toFixed(gridRes)}`;
+                        const count = labelCollisionMap[key] || 0;
+                        labelCollisionMap[key] = count + 1;
+                        // Offset down based on count
+                        yOffset = count * (layer.style.labelSize + 4);
+                    }
+
+                    const labelMarker = L.marker(finalPos, {
+                        icon: L.divIcon({
+                            className: 'ou-label',
+                            html: `<div style="color:${layer.style.labelColor}; font-size:${layer.style.labelSize}px; margin-top:${yOffset}px;">${feature.name}</div>`,
+                            iconSize: [200, 20],
+                            iconAnchor: [100, 10]
+                        }),
+                        draggable: true
+                    });
+
+                    labelMarker.on('dragend', function (e) {
+                        const newPos = e.target.getLatLng();
+                        feature.customLabelPos = [newPos.lat, newPos.lng];
+                    });
+
+                    labelMarker.addTo(layer.labelLayer);
+                }
+            });
+        }
+
+        function addFeaturesToLayer(layer) {
+            const iconUrl = layer.config.iconUrl;
+
+            const customIcon = iconUrl ? L.icon({
+                iconUrl: iconUrl,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+                popupAnchor: [0, -12]
+            }) : null;
+
+            layer.leafletLayer.clearLayers();
+
+            layer.data.forEach(feature => {
+                let leafletObj;
+                const coords = feature.geometry.coordinates;
+                const geomType = feature.geometry.type;
+
+                if (geomType === 'Point') {
+                    if (customIcon) {
+                        leafletObj = L.marker([coords[1], coords[0]], {
+                            icon: customIcon
+                        });
+                    } else {
+                        leafletObj = L.circleMarker([coords[1], coords[0]], {
+                            radius: 6,
+                            color: layer.style.strokeColor,
+                            weight: layer.style.strokeWidth,
+                            fillColor: layer.style.fillColor,
+                            fillOpacity: layer.style.fillOpacity
+                        });
+                    }
+                } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                    const geoJsonFeature = {
+                        type: "Feature",
+                        geometry: feature.geometry,
+                        properties: feature
+                    };
+
+                    leafletObj = L.geoJSON(geoJsonFeature, {
+                        style: {
+                            color: layer.style.strokeColor,
+                            weight: layer.style.strokeWidth,
+                            opacity: 1,
+                            fillColor: layer.style.fillColor,
+                            fillOpacity: layer.style.fillOpacity
+                        }
+                    });
+                }
+
+                if (leafletObj) {
+                    const popupContent = `
+                        <div class="popup-details">
+                            <div class="popup-title">${feature.name}</div>
+                            <div style="margin-bottom:4px;"><strong>ID:</strong> ${feature.id}</div>
+                            <div style="margin-bottom:4px;"><strong>Source:</strong> ${layer.source === 'file' ? 'Fichier Local' : 'DHIS2'}</div>
+                            ${feature.groups && feature.groups.length > 0 ? `<div style="margin-bottom:4px;"><strong>Groupes:</strong> ${feature.groups.join(', ')}</div>` : ''}
+                            <div style="margin-bottom:4px;"><strong>Coords:</strong> ${geomType === 'Point' ? coords[1].toFixed(6) + ', ' + coords[0].toFixed(6) : geomType}</div>
+                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; margin-top:5px;" onclick="copyToClipboard('${feature.id}')">Copier ID</button>
+                        </div>
+                    `;
+                    leafletObj.bindPopup(popupContent);
+                    leafletObj.addTo(layer.leafletLayer);
+                }
+            });
+
+            rebuildAllLabels();
+            if (map) refreshMapLayers();
+        }
+
+        function updateLayerStyle(layerId) {
+            const layer = layers.find(l => l.id === layerId);
+            if (!layer) return;
+
+            layer.style.strokeColor = $(`#strokeColor_${layerId}`).val();
+            layer.style.strokeWidth = parseInt($(`#strokeWidth_${layerId}`).val());
+            layer.style.fillColor = $(`#fillColor_${layerId}`).val();
+            layer.style.fillOpacity = parseFloat($(`#fillOpacity_${layerId}`).val());
+            layer.style.labelColor = $(`#labelColor_${layerId}`).val();
+            layer.style.labelSize = parseInt($(`#labelSize_${layerId}`).val());
+
+            // Re-render geometries
+            addFeaturesToLayer(layer);
+        }
+
+        async function exportLayerGeoJSON(layerId) {
+            const layer = layers.find(l => l.id === layerId);
+            if (!layer) return;
+
+            const $btn = $(event.currentTarget);
+            if ($btn.prop('disabled')) return;
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+            try {
+                showToast('info', 'Export', `Préparation de l'export pour ${layer.name}...`);
+
+                const features = layer.data.map(feature => ({
+                    type: "Feature",
+                    geometry: feature.geometry,
+                    properties: {
+                        ...feature.properties,
+                        layer_name: layer.name,
+                        layer_id: layer.id,
+                        dhis2_id: feature.id,
+                        dhis2_name: feature.name
+                    }
+                }));
+
+                const featureCollection = {
+                    type: "FeatureCollection",
+                    name: layer.name,
+                    features: features
+                };
+
+                const jsonStr = JSON.stringify(featureCollection, null, 2);
+                const blob = new Blob([jsonStr], { type: "application/geo+json" });
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const safeName = layer.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                link.href = url;
+                link.download = `layer_${safeName}_${timestamp}.geojson`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showToast('success', 'Export terminé', `${features.length} éléments exportés.`);
+            } catch (err) {
+                showToast('error', 'Erreur export', err.message);
+            } finally {
+                $btn.prop('disabled', false).html('<i class="fas fa-file-export"></i>');
+            }
+        }
+
+        async function exportMapGPKG() {
+            const $btn = $(event.currentTarget);
+            if ($btn.prop('disabled')) return;
+
+            if (layers.length === 0) {
+                showToast('warning', 'Aucun calque', 'Ajoutez au moins un calque pour pouvoir exporter.');
+                return;
+            }
+
+            const activeLayers = layers.filter(l => l.visible);
+            if (activeLayers.length === 0) {
+                showToast('warning', 'Calques masqués', 'Affichez au moins un calque pour l\'export.');
+                return;
+            }
+
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Export...');
+            $('#mapLoader').css('display', 'flex');
+            setLoaderProgress(10, 'Préparation de l\'export SIG...');
+
+            try {
+                const allFeatures = [];
+                let processed = 0;
+                const total = activeLayers.reduce((acc, l) => acc + l.data.length, 0);
+
+                for (const layer of activeLayers) {
+                    setLoaderProgress(10 + (processed / total * 80), `Export du calque: ${layer.name}...`);
+
+                    layer.data.forEach(feature => {
+                        allFeatures.push({
+                            type: "Feature",
+                            geometry: feature.geometry,
+                            properties: {
+                                ...feature.properties,
+                                layer_name: layer.name,
+                                layer_id: layer.id,
+                                dhis2_id: feature.id,
+                                dhis2_name: feature.name
+                            }
+                        });
+                        processed++;
+                    });
+                }
+
+                setLoaderProgress(90, 'Génération du fichier...');
+
+                const featureCollection = {
+                    type: "FeatureCollection",
+                    name: "Export_Carte_DHIS2",
+                    features: allFeatures
+                };
+
+                const jsonStr = JSON.stringify(featureCollection, null, 2);
+                const blob = new Blob([jsonStr], { type: "application/geo+json" });
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                link.href = url;
+                link.download = `carte_entiere_${timestamp}.geojson`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showToast('success', 'Export SIG terminé', `${allFeatures.length} éléments exportés de ${activeLayers.length} calques.`);
+                showToast('info', 'SIG Info', 'Le fichier GeoJSON peut être ouvert directement dans QGIS ou converti en GPKG.');
+
+            } catch (err) {
+                showToast('error', 'Erreur export', err.message);
+            } finally {
+                $btn.prop('disabled', false).html('<i class="fas fa-database"></i> SIG (GPKG / GeoJSON)');
+                $('#mapLoader').hide();
+                setLoaderProgress(null);
+            }
+        }
+
+        function refreshMapLayers() {
+            if (!map) return;
+            // Remove everything first to rebuild the stack
+            layers.forEach(l => {
+                map.removeLayer(l.leafletLayer);
+                map.removeLayer(l.labelLayer);
+            });
+            // Re-add in reverse order: Index 0 (High Level) is added LAST so it stays on TOP
+            for (let i = layers.length - 1; i >= 0; i--) {
+                const l = layers[i];
+                if (l.visible) {
+                    map.addLayer(l.leafletLayer);
+                    if (l.showLabels) map.addLayer(l.labelLayer);
+                }
+            }
+        }
+
+        function moveLayer(layerId, direction) {
+            const index = layers.findIndex(l => l.id === layerId);
+            if (index === -1) return;
+
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= layers.length) return;
+
+            // Swap in array
+            const temp = layers[index];
+            layers[index] = layers[newIndex];
+            layers[newIndex] = temp;
+
+            renderLayersList();
+            refreshMapLayers();
+            rebuildAllLabels(); // Recalculate offsets based on new order
+        }
+
+        function toggleLayerVisibility(layerId) {
+            const layer = layers.find(l => l.id === layerId);
+            if (!layer) return;
+
+            layer.visible = !layer.visible;
+            refreshMapLayers();
+            rebuildAllLabels();
+            renderLayersList();
+            updateLegend();
+        }
+
+        function toggleLayerLabels(layerId) {
+            const layer = layers.find(l => l.id === layerId);
+            if (!layer) return;
+
+            layer.showLabels = !layer.showLabels;
+            refreshMapLayers();
+            rebuildAllLabels();
+            renderLayersList();
+        }
+
+        function removeLayer(layerId) {
+            const index = layers.findIndex(l => l.id === layerId);
+            if (index > -1 && map) {
+                map.removeLayer(layers[index].leafletLayer);
+                map.removeLayer(layers[index].labelLayer);
+                layers.splice(index, 1);
+                renderLayersList();
+                updateLegend();
+            }
+        }
+
+        function renderLayersList() {
+            const $container = $('#layersList');
+            $container.empty();
+
+            if (layers.length === 0) {
+                $('#emptyLayersNote').show();
+                return;
+            }
+
+            $('#emptyLayersNote').hide();
+
+            layers.forEach((layer, index) => {
+                let iconPreview = '';
+                if (layer.config.iconUrl) {
+                    iconPreview = `<img src="${layer.config.iconUrl}" style="width:16px;height:16px;">`;
+                } else if (layer.geomType === 'Polygon') {
+                    const fillValue = layer.style.fillOpacity > 0 ? layer.style.fillColor : 'transparent';
+                    iconPreview = `<div style="width: 12px; height: 12px; border: 2px solid ${layer.style.strokeColor}; background: ${fillValue}; border-radius: 2px; display: inline-block;"></div>`;
+                } else {
+                    iconPreview = `<i class="fas fa-circle" style="color:${layer.style.strokeColor}; font-size:10px;"></i>`;
+                }
+
+                const sourceDetails = layer.source === 'file' ?
+                    `<span style="color:#10b981;"><i class="fas fa-file-import"></i> ${layer.config.fileName}</span>` :
+                    `${layer.config.parentName} ${layer.config.includeDescendants ? '(+ descendance)' : ''}`;
+
+                const html = `
+                    <div class="layer-item">
+                        <div class="layer-header">
+                            <span class="layer-title">${iconPreview} ${layer.name}</span>
+                            <div class="layer-controls">
+                                <button class="layer-btn" onclick="moveLayer('${layer.id}', -1)" title="Monter" ${index === 0 ? 'disabled style="opacity:0.3"' : ''}>
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                                <button class="layer-btn" onclick="moveLayer('${layer.id}', 1)" title="Descendre" ${index === layers.length - 1 ? 'disabled style="opacity:0.3"' : ''}>
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button class="layer-btn toggle-visible ${layer.visible ? 'active' : ''}" onclick="toggleLayerVisibility('${layer.id}')" title="Visibilité">
+                                    <i class="fas ${layer.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                                </button>
+                                <button class="layer-btn" onclick="exportLayerGeoJSON('${layer.id}')" title="Exporter en GeoJSON">
+                                    <i class="fas fa-file-export"></i>
+                                </button>
+                                <button class="layer-btn" onclick="openAddLayerModal('${layer.id}')" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="layer-btn" onclick="removeLayer('${layer.id}')" title="Supprimer">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="layer-details">
+                            ${sourceDetails}
+                            ${layer.config.groupId ? '<br><span style="font-size:10px; color:#667eea;">Groupe: ' + layer.config.groupName + '</span>' : ''}
+                        </div>
+                        <div class="layer-options">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text-secondary); cursor:pointer;">
+                                    <input type="checkbox" ${layer.showLabels ? 'checked' : ''} onchange="toggleLayerLabels('${layer.id}')"> Noms
+                                </label>
+                                <button class="btn-icon" onclick="$('#style_${layer.id}').slideToggle()" style="background:none; border:none; color:#667eea; font-size:11px; cursor:pointer;">
+                                    <i class="fas fa-palette"></i> Style
+                                </button>
+                                <span style="font-size:11px; opacity:0.7;">${layer.data.length} UO</span>
+                            </div>
+
+                            <div class="layer-style-settings" id="style_${layer.id}">
+                                <div class="style-grid">
+                                    <div class="style-item">
+                                        <label>Bordure</label>
+                                        <input type="color" id="strokeColor_${layer.id}" value="${layer.style.strokeColor}" onchange="updateLayerStyle('${layer.id}')" class="input-mini" style="height:25px; padding:2px;">
+                                    </div>
+                                    <div class="style-item">
+                                        <label>Épaisseur</label>
+                                        <input type="number" id="strokeWidth_${layer.id}" value="${layer.style.strokeWidth}" min="1" max="10" onchange="updateLayerStyle('${layer.id}')" class="input-mini">
+                                    </div>
+                                    <div class="style-item">
+                                        <label>Remplissage</label>
+                                        <div style="display:flex; gap:4px; align-items:center;">
+                                            <input type="color" id="fillColor_${layer.id}" value="${layer.style.fillColor}" onchange="updateLayerStyle('${layer.id}')" class="input-mini" style="height:25px; padding:2px; width:40px;">
+                                            <input type="range" id="fillOpacity_${layer.id}" value="${layer.style.fillOpacity}" min="0" max="1" step="0.1" oninput="updateLayerStyle('${layer.id}')" style="flex:1; height:4px; accent-color:#667eea;">
+                                        </div>
+                                    </div>
+                                    <div class="style-item">
+                                        <label>Étiquette</label>
+                                        <input type="color" id="labelColor_${layer.id}" value="${layer.style.labelColor}" onchange="updateLayerStyle('${layer.id}')" class="input-mini" style="height:25px; padding:2px;">
+                                    </div>
+                                    <div class="style-item">
+                                        <label>Taille Texte</label>
+                                        <input type="number" id="labelSize_${layer.id}" value="${layer.style.labelSize}" min="8" max="30" onchange="updateLayerStyle('${layer.id}')" class="input-mini">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $container.append(html);
+            });
+        }
+
+        function updateLegend() {
+            const $content = $('#legendContent');
+            $content.empty();
+
+            const visibleLayers = layers.filter(l => l.visible);
+
+            if (visibleLayers.length === 0) {
+                $('#legend').fadeOut();
+                return;
+            }
+
+            // By default, if we have layers, we show it (or keep it shown)
+            if ($('#legend').css('display') === 'none' && !legendManuallyHidden) {
+                $('#legend').fadeIn();
+            }
+
+            visibleLayers.forEach(layer => {
+                let iconHtml = '';
+                if (layer.config.iconUrl) {
+                    iconHtml = `<img src="${layer.config.iconUrl}">`;
+                } else if (layer.geomType === 'Polygon') {
+                    const fillValue = layer.style.fillOpacity > 0 ? layer.style.fillColor : 'transparent';
+                    iconHtml = `<div style="width: 14px; height: 14px; border: 2px solid ${layer.style.strokeColor}; background: ${fillValue}; border-radius: 1px; display: inline-block;"></div>`;
+                } else {
+                    iconHtml = `<i class="fas fa-circle" style="color:${layer.style.strokeColor}"></i>`;
+                }
+
+                $content.append(`
+                    <div class="legend-item">
+                        <div class="legend-icon">${iconHtml}</div>
+                        <div>
+                            <span style="color: #1a1a2e; font-weight: 500;">${layer.name}</span>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        let legendManuallyHidden = false;
+        function toggleLegendDisplay() {
+            const isVisible = $('#legend').is(':visible');
+            if (isVisible) {
+                $('#legend').fadeOut();
+                legendManuallyHidden = true;
+            } else {
+                $('#legend').fadeIn();
+                legendManuallyHidden = false;
+                updateLegend();
+            }
+        }
+
+        function toggleNorthArrow() {
+            const $arrow = $('#northArrow');
+            if ($arrow.is(':visible')) {
+                $arrow.fadeOut();
+            } else {
+                $arrow.fadeIn().css('display', 'flex');
+            }
+        }
+
+        function toggleCoordinateDisplay() {
+            const $coords = $('#coordDisplay');
+            if ($coords.is(':visible')) {
+                $coords.fadeOut();
+                $('#btnToggleCoords').removeClass('active');
+            } else {
+                $coords.fadeIn();
+                $('#btnToggleCoords').addClass('active');
+            }
+        }
+
+        // --- DHIS2 Org Unit Tree ---
+        async function loadTree() {
+            const container = $('#orgUnitTreeContainer');
+            try {
+                const data = await dhis2Session.get('/api/organisationUnits', {
+                    level: 1,
+                    fields: 'id,displayName,children::isNotEmpty',
+                    paging: false
+                });
+
+                container.empty();
+                const rootUl = $('<ul class="tree-ul root-ul"></ul>');
+                data.organisationUnits.sort((a, b) => a.displayName.localeCompare(b.displayName));
+                data.organisationUnits.forEach(ou => {
+                    rootUl.append(renderTreeNode(ou));
+                });
+                container.append(rootUl);
+                treeLoaded = true;
+            } catch (e) {
+                container.html('<p style="color:red">Erreur lors du chargement de l\'arbre.</p>');
+            }
+        }
+
+        async function loadTreeChildren(parentId, $li) {
+            try {
+                const data = await dhis2Session.get(`/api/organisationUnits/${parentId}`, {
+                    fields: 'children[id,displayName,children::isNotEmpty]'
+                });
+                const children = data.children;
+                if (children && children.length > 0) {
+                    children.sort((a, b) => a.displayName.localeCompare(b.displayName));
+                    const ul = $('<ul class="tree-ul" style="display:none;"></ul>');
+                    children.forEach(child => ul.append(renderTreeNode(child)));
+                    $li.append(ul);
+                    ul.slideDown();
+                } else {
+                    $li.find('.tree-toggle i').css('opacity', '0.2');
+                }
+            } catch (e) {
+                showToast('error', 'Erreur', 'Impossible de charger les sous-niveaux');
+            }
+        }
+
+        function renderTreeNode(ou) {
+            const hasChildren = ou.children === true || (Array.isArray(ou.children) && ou.children.length > 0) || ou.children === undefined;
+            const toggleHtml = !hasChildren ?
+                '<span class="tree-toggle" style="opacity:0"></span>' :
+                '<span class="tree-toggle"><i class="fas fa-caret-right"></i></span>';
+
+            return $(`
+                <li data-id="${ou.id}">
+                    <div class="tree-node-content">
+                        ${toggleHtml}
+                        <i class="fas ${hasChildren ? 'fa-folder' : 'fa-circle'}" style="margin: 0 8px; font-size: ${hasChildren ? '14px' : '8px'}"></i>
+                        <span class="node-text">${ou.displayName}</span>
+                    </div>
+                </li>
+            `);
+        }
+
+        $(document).on('click', '.tree-toggle', function (e) {
+            e.stopPropagation();
+            const $li = $(this).closest('li');
+            const $ul = $li.children('ul');
+            const $icon = $(this).find('i');
+            if ($ul.length > 0) {
+                $ul.slideToggle();
+                $icon.toggleClass('fa-caret-right fa-caret-down');
+            } else {
+                loadTreeChildren($li.data('id'), $li);
+                $icon.removeClass('fa-caret-right').addClass('fa-caret-down');
+            }
+        });
+
+        $(document).on('click', '.tree-node-content', function () {
+            $('.tree-node-content').removeClass('selected');
+            $(this).addClass('selected');
+            const id = $(this).parent().data('id');
+            const name = $(this).find('.node-text').text();
+            $('#parentIdInput').val(id);
+            $('#parentNameDisplay').val(name);
+        });
+
+        async function loadGroups() {
+            const $select = $('#groupSelectInput');
+            try {
+                const config = dhis2Session.getConfig();
+                const response = await $.ajax({
+                    url: 'api/map-visualizer.php?action=groups',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        dhis2_url: config.url,
+                        dhis2_auth: config.authHeader
+                    })
+                });
+                if (response.success) {
+                    $select.empty().append('<option value="">Aucun</option>');
+                    response.data.sort((a, b) => a.displayName.localeCompare(b.displayName)).forEach(g => {
+                        $select.append(`<option value="${g.id}">${g.displayName}</option>`);
+                    });
+                    groupsLoaded = true;
+                    return response.data;
+                }
+            } catch (e) {
+                console.error(e);
+                throw e;
+            }
+        }
+
+        // --- Export & Utils ---
+        async function exportMap() {
+            if (!map) return;
+            const $btn = $(event.currentTarget);
+            if ($btn.prop('disabled')) return;
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Export...');
+
+            const $mapWrapper = $('.map-container-wrapper');
+            const $controls = $('.leaflet-control-container');
+
+            // Force redraw labels correctly
+            rebuildAllLabels();
+
+            $('#mapLoader').css('display', 'flex');
+            setLoaderProgress(10, 'Hiding controls...');
+
+            // Hide controls for clean export
+            $controls.hide();
+            setLoaderProgress(30, 'Preparing canvas...');
+
+            // Scroll to top to avoid html2canvas offsets issues
+            const oldScrollY = window.scrollY;
+            const oldScrollX = window.scrollX;
+            window.scrollTo(0, 0);
+
+            try {
+                // Leaflet uses CSS transforms (translate3d) which html2canvas sometimes miscalculates.
+                // Using preferCanvas:true in initMap helps because vector layers are drawn on a single canvas.
+                // For DivIcons/Markers, we may need to flatten transforms in the clone.
+
+                const canvas = await html2canvas($mapWrapper[0], {
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#1a1a2e',
+                    scale: 2,
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    width: $mapWrapper.outerWidth(),
+                    height: $mapWrapper.outerHeight(),
+                    onclone: (clonedDoc) => {
+                        // Fix legend visibility in clone
+                        const clonedLegend = clonedDoc.getElementById('legend');
+                        if (clonedLegend && $('#legend').is(':visible')) {
+                            clonedLegend.style.display = 'block';
+                            clonedLegend.style.opacity = '1';
+                        }
+
+                        // Fix north arrow visibility in clone
+                        const clonedArrow = clonedDoc.getElementById('northArrow');
+                        if (clonedArrow && $('#northArrow').is(':visible')) {
+                            clonedArrow.style.display = 'flex';
+                            clonedArrow.style.opacity = '1';
+                        }
+
+                        // Fix source visibility in clone
+                        const clonedSource = clonedDoc.getElementById('mapSource');
+                        if (clonedSource && $('#mapSource').is(':visible')) {
+                            clonedSource.style.display = 'block';
+                            clonedSource.style.opacity = '1';
+                        }
+
+                        // html2canvas handles 2D matrix better. We force translation to 2D components.
+                        const transformedElements = clonedDoc.querySelectorAll('.leaflet-map-pane, .leaflet-tile-pane, .leaflet-marker-pane, .leaflet-shadow-pane, .leaflet-overlay-pane, .leaflet-zoom-animated');
+                        transformedElements.forEach(el => {
+                            const style = window.getComputedStyle(el);
+                            const transform = style.getPropertyValue('transform') || style.webkitTransform;
+                            if (transform && transform !== 'none') {
+                                if (transform.indexOf('matrix3d') > -1) {
+                                    const parts = transform.match(/matrix3d\((.+)\)/)[1].split(', ');
+                                    el.style.transform = `matrix(${parts[0]}, ${parts[1]}, ${parts[4]}, ${parts[5]}, ${parts[12]}, ${parts[13]})`;
+                                } else if (transform.indexOf('translate3d') > -1) {
+                                    const parts = transform.match(/translate3d\((.+)\)/)[1].split(', ');
+                                    el.style.transform = `translate(${parts[0]}, ${parts[1]})`;
+                                } else {
+                                    el.style.transform = transform.replace('3d', '');
+                                }
+                            }
+                        });
+
+                        // Ensure labels are not hidden or shifted in the clone
+                        const labels = clonedDoc.querySelectorAll('.ou-label');
+                        labels.forEach(l => {
+                            l.style.width = 'auto'; // Prevent wrapping issues in export
+                        });
+                    }
+                });
+
+                setLoaderProgress(80, 'Saving image...');
+
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                link.download = `carte_dhis2_${timestamp}.png`;
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+
+                showToast('success', 'Export réussi', 'Votre carte a été téléchargée au format PNG.');
+
+            } catch (err) {
+                console.error('Export Error:', err);
+                showToast('error', 'Erreur Export', 'Impossible de générer l\'image.');
+            } finally {
+                $btn.prop('disabled', false).html('<i class="fas fa-file-image"></i> Image (PNG)');
+                $controls.show();
+                window.scrollTo(oldScrollX, oldScrollY);
+                $('#mapLoader').hide();
+                setLoaderProgress(null);
+            }
+        }
+        function copyToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+        }
+
+        function makeDraggable(el) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            const header = el.querySelector(".legend-header");
+            if (header) {
+                header.onmousedown = dragMouseDown;
+            } else {
+                el.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                el.style.top = (el.offsetTop - pos2) + "px";
+                el.style.left = (el.offsetLeft - pos1) + "px";
+                el.style.bottom = 'auto';
+                el.style.right = 'auto';
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // --- Project Save/Load ---
+        function saveProject() {
+            if (layers.length === 0 && !$('#inputTitle').val()) {
+                showToast('warning', 'Projet vide', 'Rien à sauvegarder pour le moment.');
+                return;
+            }
+
+            const projectData = {
+                version: '1.0',
+                meta: {
+                    title: $('#inputTitle').val(),
+                    source: $('#inputSource').val(),
+                    sourceVisible: $('#mapSource').is(':visible'),
+                    legendVisible: $('#legend').is(':visible'),
+                    legendManuallyHidden: legendManuallyHidden,
+                    northVisible: $('#northArrow').is(':visible'),
+                    coordsVisible: $('#coordDisplay').is(':visible'),
+                    basemap: $('#selectBasemap').val(),
+                    timestamp: new Date().toISOString()
+                },
+                viewport: map ? {
+                    center: map.getCenter(),
+                    zoom: map.getZoom()
+                } : null,
+                positions: {
+                    title: $('#mapTitle').attr('style'),
+                    legend: $('#legend').attr('style'),
+                    north: $('#northArrow').attr('style'),
+                    source: $('#mapSource').attr('style')
+                },
+                layers: layers.map(l => ({
+                    id: l.id,
+                    name: l.name,
+                    source: l.source,
+                    geomType: l.geomType, // IMPORTANT: Save geometry type
+                    config: l.config,
+                    style: l.style,
+                    data: l.data,
+                    visible: l.visible,
+                    showLabels: l.showLabels
+                }))
+            };
+
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().slice(0, 10);
+            link.href = url;
+            link.download = `projet_carte_${timestamp}.dmap`;
+            link.click();
+            URL.revokeObjectURL(url);
+
+            showToast('success', 'Succès', 'Configuration du projet téléchargée.');
+        }
+
+        function loadProject(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const project = JSON.parse(e.target.result);
+
+                    // Reset current state
+                    layers.forEach(l => {
+                        map.removeLayer(l.leafletLayer);
+                        map.removeLayer(l.labelLayer);
+                    });
+                    layers = [];
+
+                    // Restore Meta
+                    $('#inputTitle').val(project.meta.title || '').trigger('input');
+                    $('#inputSource').val(project.meta.source || '').trigger('input');
+
+                    if (project.meta.sourceVisible) $('#mapSource').show(); else $('#mapSource').hide();
+
+                    legendManuallyHidden = project.meta.legendManuallyHidden || false;
+                    if (project.meta.legendVisible) $('#legend').show(); else $('#legend').hide();
+                    if (project.meta.northVisible) $('#northArrow').show().css('display', 'flex'); else $('#northArrow').hide();
+                    if (project.meta.coordsVisible !== false) {
+                        $('#coordDisplay').show();
+                        $('#btnToggleCoords').addClass('active');
+                    } else {
+                        $('#coordDisplay').hide();
+                        $('#btnToggleCoords').removeClass('active');
+                    }
+
+                    $('#selectBasemap').val(project.meta.basemap || 'osm').trigger('change');
+
+                    // Restore Viewport
+                    if (project.viewport && map) {
+                        map.setView(project.viewport.center, project.viewport.zoom);
+                    }
+
+                    // Restore Positions
+                    if (project.positions) {
+                        if (project.positions.title) $('#mapTitle').attr('style', project.positions.title);
+                        if (project.positions.legend) $('#legend').attr('style', project.positions.legend);
+                        if (project.positions.north) $('#northArrow').attr('style', project.positions.north);
+                        if (project.positions.source) $('#mapSource').attr('style', project.positions.source);
+                    }
+
+                    // Restore Layers
+                    project.layers.forEach(lData => {
+                        const newLayer = {
+                            ...lData,
+                            leafletLayer: L.layerGroup(),
+                            labelLayer: L.layerGroup()
+                        };
+                        layers.push(newLayer); // Push first
+                        addFeaturesToLayer(newLayer);
+                    });
+
+                    if (map) refreshMapLayers();
+
+                    renderLayersList();
+                    updateLegend();
+                    showToast('success', 'Projet chargé', `${project.layers.length} calques restaurés.`);
+                } catch (err) {
+                    console.error("Load error:", err);
+                    showToast('error', 'Erreur', 'Impossible de lire le fichier de projet.');
+                }
+                input.value = ''; // Reset input
+            };
+            reader.readAsText(file);
+        }
+
+        window.showToast = function (type, title, message) {
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+            const toast = $(`<div class="toast toast-${type}"><i class="fas ${icons[type]}"></i><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div></div>`);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 5000);
+        };
+    </script>
+</body>
+
+</html>

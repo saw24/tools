@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suppression de Données - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        /* Custom Styles for this module */
+        .data-element-list-container {
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .list-search-bar {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .list-scroll-area {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .data-element-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .data-element-item:last-child {
+            border-bottom: none;
+        }
+
+        .data-element-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .data-element-item.selected {
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .data-element-item input[type="checkbox"] {
+            margin-right: 15px;
+            transform: scale(1.2);
+            accent-color: #667eea;
+        }
+
+        .de-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .de-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .de-id {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        /* Tree View Styles */
+        .org-unit-tree {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .tree-ul {
+            list-style: none;
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .tree-ul.root-ul {
+            padding-left: 0;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .tree-node-content:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .tree-node-content.selected {
+            background: rgba(102, 126, 234, 0.25);
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tree-toggle {
+            width: 24px;
+            text-align: center;
+            margin-right: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tree-toggle:hover {
+            color: white;
+        }
+
+        .tree-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .summary-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .warning-box i {
+            font-size: 24px;
+        }
+
+        /* Progress Steps */
+        .execution-steps {
+            margin-top: 30px;
+        }
+
+        .exec-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+
+        .exec-step.active {
+            opacity: 1;
+        }
+
+        .exec-step.completed {
+            opacity: 1;
+            color: #34d399;
+        }
+
+        .exec-step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .exec-step.active .exec-step-icon {
+            background: #667eea;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.5);
+            animation: pulse-blue 2s infinite;
+        }
+
+        .exec-step.completed .exec-step-icon {
+            background: #10b981;
+        }
+
+        @keyframes pulse-blue {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+            }
+        }
+
+        .logs-container {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #333;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #2a2a2a;
+            padding-bottom: 5px;
+        }
+
+        .log-time {
+            color: #666;
+        }
+
+        .log-info {
+            color: #667eea;
+        }
+
+        .log-success {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        /* Modern Search Input Style */
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .form-input.modern-search {
+            width: 100%;
+            height: 50px;
+            padding-left: 45px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            color: #ffffff;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #selectedOrgUnitName {
+            color: #ffffff !important;
+        }
+
+        .form-input.modern-search:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            pointer-events: none;
+            transition: color 0.3s ease;
+        }
+
+        .form-input.modern-search:focus+.search-icon {
+            color: #667eea;
+        }
+
+        /* Home Button Style Fix */
+        .btn-home-link {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff !important;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-home-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Org Unit Search Results */
+        .ou-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-top: 5px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .ou-search-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .ou-search-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .ou-search-item .ou-path {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* DHIS2 Pivot Table Styling */
+        .preview-table-container {
+            margin-top: 20px;
+            overflow: auto;
+            background: #1e1e2d; /* Match app theme better */
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-height: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            color: #e1e1e1; /* Light text on dark bg */
+            font-family: 'Inter', sans-serif;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            height: auto;
+        }
+
+        /* Headers */
+        .preview-table th {
+            background-color: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            font-weight: 600;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        /* First column style */
+        .preview-table td:first-child, 
+        .preview-table th:first-child {
+            background-color: rgba(0, 0, 0, 0.2);
+            text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            min-width: 300px;
+        }
+
+        .preview-table th:first-child {
+            z-index: 30;
+        }
+
+        /* Data cells */
+        .preview-table td {
+            background-color: transparent;
+            text-align: right;
+            min-width: 120px;
+            color: #ffffff;
+        }
+
+        /* Hover effect */
+        .preview-table tr:hover td {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .preview-table tr.selected td {
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+
+        .row-checkbox {
+            margin-right: 10px;
+            transform: scale(1.2);
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .export-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-trash-alt" style="color: #ef4444;"></i>
+                    <h1>Suppression de Données</h1>
+                </div>
+                <p class="subtitle">Supprimez massivement des valeurs de données pour des éléments et unités
+                    d'organisation spécifiques.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Éléments</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Unités d'Org.</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Périodes</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Identification</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-label">Suppression</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Data Element Selection -->
+        <section class="step-content glass-card" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-list-check"></i>
+                <h2>Étape 1 : Sélectionner les Éléments de Données</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="list-controls"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <p class="info-text" style="margin-bottom: 0;">Recherchez et sélectionnez les éléments dont vous
+                        souhaitez supprimer les données.</p>
+                    <div class="selection-info" id="deSelectionCount">0 élément sélectionné</div>
+                </div>
+
+                <div class="data-element-list-container">
+                    <div class="list-search-bar">
+                        <div class="search-wrapper" style="flex-grow: 1; margin-bottom: 0;">
+                            <input type="text" id="deSearchInput" class="form-input modern-search"
+                                placeholder="Rechercher par nom ou ID...">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        <button class="btn" id="btnSelectAllDE">Tout Sélectionner</button>
+                        <button class="btn" id="btnDeselectAllDE">Tout Désélectionner</button>
+                    </div>
+
+                    <div class="list-scroll-area" id="deListContainer">
+                        <div class="tree-loading">
+                            <i class="fas fa-spinner fa-spin"></i> Chargement des éléments de données...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="nextToStep2">
+                    Suivant : Sélectionner les Unités
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Org Unit Selection -->
+        <section class="step-content glass-card" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-sitemap"></i>
+                <h2>Étape 2 : Sélectionner les Unités d'Organisation</h2>
+            </div>
+
+            <div class="card-body">
+                <p class="info-text">Choisissez une unité d'organisation parente. La suppression s'appliquera à cette
+                    unité et à <strong>toute sa descendance</strong>.</p>
+
+                <div class="search-wrapper">
+                    <input type="text" id="ouSearchInput" class="form-input modern-search"
+                        placeholder="Rechercher une unité d'organisation...">
+                    <i class="fas fa-search search-icon"></i>
+                    <div id="ouSearchResults" class="ou-search-results"></div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label>Unité Parent sélectionnée</label>
+                    <div style="position: relative;">
+                        <input type="text" id="selectedOrgUnitName" class="form-input"
+                            placeholder="Sélectionnez dans l'arbre ou recherchez ci-dessus..." readonly
+                            style="background: rgba(255,255,255,0.03);">
+                        <input type="hidden" id="selectedOrgUnitId">
+                    </div>
+                </div>
+
+                <div id="orgUnitTreeContainer" class="org-unit-tree">
+                    <div class="tree-loading">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement de la hiérarchie...
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep1">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="nextToStep3">
+                    Suivant : Sélectionner les Périodes
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Period Selection -->
+        <section class="step-content glass-card" id="step3" data-step="3" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-calendar-alt"></i>
+                <h2>Étape 3 : Sélectionner les Périodes</h2>
+            </div>
+
+            <div class="card-body">
+                <p class="info-text">Indiquez les périodes pour lesquelles vous souhaitez supprimer les données.</p>
+
+                <div class="period-presets">
+                    <button class="btn btn-sm" id="presetThisYear">Cette Année</button>
+                    <button class="btn btn-sm" id="presetLastYear">L'Année dernière</button>
+                    <button class="btn btn-sm" id="presetLast12Months">12 derniers mois</button>
+                </div>
+
+                <div class="data-element-list-container">
+                    <div class="list-search-bar">
+                        <div class="search-wrapper" style="flex-grow: 1; margin-bottom: 0;">
+                            <input type="text" id="periodSearchInput" class="form-input modern-search"
+                                placeholder="Rechercher une période (ex: 2025, 202412, ...) ">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        <button class="btn" id="btnDeselectAllPeriods">Tout Désélectionner</button>
+                    </div>
+
+                    <div class="list-scroll-area" id="periodListContainer" style="max-height: 300px;">
+                        <!-- Periods will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep2">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="nextToStep4">
+                    Suivant : Valider les choix
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 4: Data Identification & Preview -->
+        <section class="step-content glass-card" id="step4" data-step="4" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-search-database"></i>
+                <h2>Étape 4 : Identification et Aperçu des Données</h2>
+            </div>
+
+            <div class="card-body">
+                <div id="identificationLoading" style="text-align: center; padding: 40px;">
+                    <i class="fas fa-cog fa-spin" style="font-size: 48px; color: #667eea; margin-bottom: 20px;"></i>
+                    <h4>Identification des données en cours...</h4>
+                    <p class="text-muted">Interrogation du serveur pour récupérer les valeurs existantes.</p>
+                    <div class="progress-container" style="max-width: 400px; margin: 20px auto;">
+                        <div id="identificationProgressBar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div id="previewContainer" style="display: none;">
+                    <div class="info-box"
+                        style="margin-bottom: 20px; border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); padding: 15px; border-radius: 8px;">
+                        <h4 style="color: #10b981; margin-bottom: 5px;"><i class="fas fa-check-circle"></i> Données
+                            Identifiées</h4>
+                        <p>Le système a trouvé <strong id="totalValuesFound">0</strong> valeur(s) correspondant à vos
+                            critères.</p>
+                    </div>
+
+                    <div class="export-actions" style="justify-content: space-between; align-items: center;">
+                        <div class="search-wrapper" style="margin-bottom: 0; width: 300px;">
+                            <input type="text" id="previewSearchInput" class="form-input modern-search" 
+                                placeholder="Filtrer l'aperçu..." style="height: 38px; font-size: 0.85rem;">
+                            <i class="fas fa-filter search-icon" style="font-size: 0.9rem;"></i>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-sm" id="btnExportJSON" title="Sauvegarde format original">
+                                <i class="fas fa-file-code"></i> Sauvegarde JSON
+                            </button>
+                            <button class="btn btn-sm" id="btnExportExcel" title="Export tableau affiché">
+                                <i class="fas fa-file-excel"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="preview-table-container">
+                        <table class="preview-table" id="dataPreviewTable">
+                            <!-- Pivot table will be rendered here -->
+                        </table>
+                    </div>
+
+                    <div class="warning-box" style="margin-top: 30px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>ZONE DE DANGER :</strong> Vous êtes sur le point de supprimer définitivement ces
+                            données du serveur.
+                            Assurez-vous d'avoir téléchargé une sauvegarde JSON ci-dessus.
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="field-item"
+                            style="cursor: pointer; font-size: 1rem; color: var(--text-primary); display: flex; align-items: center; margin-bottom: 10px;">
+                            <input type="checkbox" id="confirmDeletionCheck"
+                                style="margin-right: 12px; transform: scale(1.3);">
+                            Je confirme que les données affichées dans le tableau sont celles à supprimer.
+                        </label>
+
+                        <div
+                            style="margin-top: 15px; padding: 12px; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border: 1px dashed rgba(102, 126, 234, 0.3); font-size: 0.88rem; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-lock" style="color: #667eea;"></i>
+                            <div style="color: var(--text-secondary);">
+                                <strong>Données verrouillées ?</strong> Si certaines données sont déjà approuvées,
+                                utilisez d'abord le module
+                                <a href="data-approvals.html" style="color: #667eea; font-weight: 600;">Approbation des
+                                    Données</a>
+                                pour les déverrouiller avant la suppression.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep3">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-danger" id="btnLaunchDeletion" disabled>
+                    <i class="fas fa-trash-alt"></i> Confirmer la Suppression
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 5: Final Suppression -->
+        <section class="step-content glass-card" id="step5" data-step="5" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-cog fa-spin"></i>
+                <h2>Étape 5 : Suppression en cours</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="execution-steps">
+                    <div class="exec-step completed">
+                        <div class="exec-step-icon"><i class="fas fa-search"></i></div>
+                        <div class="exec-step-content">
+                            <h4>Phase 1 : Identification terminée</h4>
+                            <p>Toutes les données à supprimer ont été validées.</p>
+                        </div>
+                    </div>
+                    <div class="exec-step" id="execStepDelete">
+                        <div class="exec-step-icon"><i class="fas fa-trash-alt"></i></div>
+                        <div class="exec-step-content">
+                            <h4>Phase 2 : Suppression massive</h4>
+                            <p>Envoi des ordres de suppression vers le serveur DHIS2...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-container" style="margin-top: 20px;">
+                    <div id="deletionProgressBar" class="progress-bar" style="width: 0%;"></div>
+                </div>
+                <div id="deletionProgressText"
+                    style="text-align: center; margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+                    Initialisation de la suppression...
+                </div>
+
+                <div class="logs-container" id="executionLogs">
+                    <!-- Logs will be added here -->
+                </div>
+            </div>
+
+            <div class="step-actions" id="finalActions" style="display: none;">
+                <button class="btn btn-large btn-gradient" onclick="location.reload()">
+                    <i class="fas fa-redo"></i> Nouveau traitement
+                </button>
+                <button class="btn btn-large" onclick="goToStep(3)">
+                    <i class="fas fa-arrow-left"></i> Modifier les critères
+                </button>
+                <a href="index.html" class="btn btn-large btn-home-link">
+                    <i class="fas fa-home"></i> Retour à l'accueil
+                </a>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- DHIS2 Login Modal (Standard) -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback" style="display: none;">
+                    <div class="feedback-icon"><i class="fas fa-info-circle"></i></div>
+                    <div class="feedback-content">
+                        <div class="feedback-title" id="authFeedbackTitle">Information</div>
+                        <div class="feedback-message" id="authFeedbackMessage"></div>
+                    </div>
+                    <button type="button" class="feedback-close" onclick="hideAuthFeedback()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+    <script src="js/delete-data-values.js"></script>
+
+    <script>
+        // Toast helper (redefined here if not globally available)
+        if (typeof showToast === 'undefined') {
+            window.showToast = function (type, title, message) {
+                const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+                const toast = $(`<div class="toast toast-${type}"><i class="fas ${icons[type]}"></i><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div></div>`);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+            };
+        }
+    </script>
+</body>
+
+</html>

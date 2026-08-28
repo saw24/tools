@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Formulaire + Dépendances - DHIS2 Tools</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .module-container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .module-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .module-header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .export-form {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .search-row input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-row input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .list-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-small:hover {
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .dataset-list {
+            width: 100%;
+            max-height: 360px;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .dataset-row {
+            display: grid;
+            grid-template-columns: 22px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .dataset-row:last-child {
+            border-bottom: none;
+        }
+
+        .dataset-row:hover,
+        .dataset-row.selected {
+            background: rgba(102, 126, 234, 0.12);
+        }
+
+        .dataset-row input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .dataset-name {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+
+        .dataset-meta {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 3px;
+            word-break: break-word;
+        }
+
+        .dataset-period {
+            color: var(--text-secondary);
+            font-size: 12px;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .list-state {
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .list-state i {
+            display: block;
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .form-helper {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+
+        .form-helper.valid {
+            color: #10b981;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .checkbox-item small {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .btn-export {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-export:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-export:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .summary-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .summary-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+        }
+
+        .summary-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .debug-log-box {
+            background: rgba(0, 0, 0, 0.26);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .debug-log-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .debug-log-title {
+            color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .debug-log-id {
+            color: var(--text-muted);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            text-align: right;
+        }
+
+        .debug-log-content {
+            max-height: 280px;
+            overflow: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, 0.82);
+            white-space: pre-wrap;
+        }
+
+        .debug-log-line {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 3px 0;
+        }
+
+        @media (max-width: 700px) {
+            .module-header h1 {
+                font-size: 28px;
+            }
+
+            .export-form {
+                padding: 22px;
+            }
+
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+
+            .search-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .dataset-row {
+                grid-template-columns: 22px 1fr;
+            }
+
+            .dataset-period {
+                grid-column: 2;
+                justify-self: start;
+            }
+
+            .debug-log-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .debug-log-id {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="module-container">
+        <header class="module-header">
+            <h1><i class="fas fa-clipboard-list"></i> Export Formulaire + Dépendances</h1>
+            <p class="subtitle">
+                Exportez un formulaire DHIS2 avec ses éléments de données et ses combinaisons de catégories,
+                dans un paquet JSON prêt pour migration vers une autre instance.
+            </p>
+        </header>
+
+        <div class="export-form">
+            <form id="exportForm">
+                <div class="form-group">
+                    <label for="datasetSearch">
+                        <i class="fas fa-list"></i> Formulaires / DataSets disponibles
+                    </label>
+                    <div class="search-row">
+                        <input type="text" id="datasetSearch" placeholder="Rechercher par nom, UID ou périodicité..." autocomplete="off">
+                        <div class="list-actions">
+                            <button type="button" class="btn-small" id="btnSelectVisible">
+                                <i class="fas fa-check-square"></i> Sélectionner visibles
+                            </button>
+                            <button type="button" class="btn-small" id="btnClearSelection">
+                                <i class="fas fa-times"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dataset-list" id="datasetList">
+                        <div class="list-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Chargement des formulaires...
+                        </div>
+                    </div>
+                    <div class="form-helper" id="selectionHelper">
+                        Aucun formulaire sélectionné.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Options d'export</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeSections" checked>
+                            <label for="includeSections">
+                                Inclure les sections
+                                <small>Conserve l'organisation du formulaire, les éléments et champs grisés.</small>
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeOrgUnits">
+                            <label for="includeOrgUnits">
+                                Inclure les affectations unités org.
+                                <small>Ajoute seulement les références UID des unités d'organisation.</small>
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeGroups" checked>
+                            <label for="includeGroups">
+                                Inclure CategoryOptionGroups
+                                <small>Utile si les options de catégories sont regroupées.</small>
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeGroupSets" checked>
+                            <label for="includeGroupSets">
+                                Inclure CategoryOptionGroupSets
+                                <small>Ajoute les ensembles des groupes de catégories exportés.</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-export" id="btnExport">
+                    <i class="fas fa-download"></i>
+                    <span id="btnText">Exporter</span>
+                </button>
+            </form>
+
+            <div class="alert" id="alertBox"></div>
+
+            <div class="summary-box" id="summaryBox">
+                <div class="summary-title">
+                    <i class="fas fa-chart-bar"></i> Résumé de l'export
+                </div>
+                <div id="summaryContent"></div>
+            </div>
+
+            <div class="debug-log-box" id="debugLogBox">
+                <div class="debug-log-header">
+                    <div class="debug-log-title">
+                        <i class="fas fa-terminal"></i> Journal d'exécution
+                    </div>
+                    <div class="debug-log-id" id="debugLogId"></div>
+                </div>
+                <div class="debug-log-content" id="debugLogContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback">
+                    <div class="feedback-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="feedback-content">
+                        <div class="feedback-title">Titre</div>
+                        <div class="feedback-message">Message</div>
+                    </div>
+                    <button class="feedback-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input" placeholder="https://play.dhis2.org/2.40.0" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        let allDataSets = [];
+        let filteredDataSets = [];
+        let logPollingTimer = null;
+        const selectedDataSetIds = new Set();
+
+        window.showToast = window.showToast || function (type, title, message) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type] || icons.info}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+        };
+
+        $(document).ready(async function () {
+            if (!hasValidDHIS2Config()) {
+                clearInvalidDHIS2Config();
+                showToast('error', 'Session DHIS2 requise', 'Vous allez être redirigé pour vous connecter...');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 3000);
+                return;
+            }
+
+            await loadDataSets();
+        });
+
+        $('#datasetSearch').on('input', function () {
+            applyDataSetFilter($(this).val());
+        });
+
+        $('#btnSelectVisible').on('click', function () {
+            filteredDataSets.forEach(ds => selectedDataSetIds.add(ds.id));
+            renderDataSetList();
+            updateSelectionState();
+        });
+
+        $('#btnClearSelection').on('click', function () {
+            selectedDataSetIds.clear();
+            renderDataSetList();
+            updateSelectionState();
+        });
+
+        $(document).on('change', '.dataset-checkbox', function (e) {
+            e.stopPropagation();
+            const id = $(this).data('id');
+            setDataSetSelection(id, $(this).is(':checked'));
+        });
+
+        $(document).on('click', '.dataset-row', function (e) {
+            if ($(e.target).is('input')) {
+                return;
+            }
+
+            const checkbox = $(this).find('.dataset-checkbox');
+            checkbox.prop('checked', !checkbox.is(':checked')).trigger('change');
+        });
+
+        $('#exportForm').on('submit', async function (e) {
+            e.preventDefault();
+
+            const selectedUids = Array.from(selectedDataSetIds);
+            if (selectedUids.length === 0) {
+                showAlert('error', 'Veuillez sélectionner au moins un formulaire.');
+                return;
+            }
+
+            await exportForms(selectedUids, {
+                includeSections: $('#includeSections').is(':checked'),
+                includeOrgUnits: $('#includeOrgUnits').is(':checked'),
+                includeGroups: $('#includeGroups').is(':checked'),
+                includeGroupSets: $('#includeGroupSets').is(':checked')
+            });
+        });
+
+        async function loadDataSets() {
+            try {
+                if (!hasValidDHIS2Config()) {
+                    throw new Error('Session DHIS2 incomplète. Veuillez vous reconnecter.');
+                }
+
+                $('#datasetList').html(`
+                    <div class="list-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Chargement des formulaires...
+                    </div>
+                `);
+
+                const response = await dhis2Session.getDataSets({
+                    fields: 'id,displayName,name,periodType,created,lastUpdated',
+                    paging: false
+                });
+
+                allDataSets = (response.dataSets || []).sort((a, b) =>
+                    getDataSetName(a).localeCompare(getDataSetName(b))
+                );
+                filteredDataSets = [...allDataSets];
+                renderDataSetList();
+                updateSelectionState();
+                showToast('success', 'Chargé', `${allDataSets.length} formulaire(s) chargé(s)`);
+            } catch (error) {
+                console.error('Erreur chargement formulaires:', error);
+                $('#datasetList').html(`
+                    <div class="list-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Impossible de charger les formulaires.
+                    </div>
+                `);
+                showToast('error', 'Erreur', error.message || 'Impossible de charger les formulaires.');
+            }
+        }
+
+        function applyDataSetFilter(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            filteredDataSets = term
+                ? allDataSets.filter(ds => {
+                    const haystack = `${ds.id} ${getDataSetName(ds)} ${ds.periodType || ''}`.toLowerCase();
+                    return haystack.includes(term);
+                })
+                : [...allDataSets];
+
+            renderDataSetList();
+            updateSelectionState();
+        }
+
+        function renderDataSetList() {
+            if (filteredDataSets.length === 0) {
+                $('#datasetList').html(`
+                    <div class="list-state">
+                        <i class="fas fa-inbox"></i>
+                        Aucun formulaire ne correspond à votre recherche.
+                    </div>
+                `);
+                return;
+            }
+
+            const html = filteredDataSets.map(ds => {
+                const checked = selectedDataSetIds.has(ds.id) ? 'checked' : '';
+                const selectedClass = selectedDataSetIds.has(ds.id) ? ' selected' : '';
+                const name = escapeHtml(getDataSetName(ds));
+                const periodType = escapeHtml(ds.periodType || 'N/A');
+
+                return `
+                    <div class="dataset-row${selectedClass}" data-id="${ds.id}">
+                        <input type="checkbox" class="dataset-checkbox" data-id="${ds.id}" ${checked}>
+                        <div>
+                            <div class="dataset-name">${name}</div>
+                            <div class="dataset-meta">${ds.id}</div>
+                        </div>
+                        <span class="dataset-period">${periodType}</span>
+                    </div>
+                `;
+            }).join('');
+
+            $('#datasetList').html(html);
+        }
+
+        function setDataSetSelection(id, isSelected) {
+            if (isSelected) {
+                selectedDataSetIds.add(id);
+            } else {
+                selectedDataSetIds.delete(id);
+            }
+
+            $(`.dataset-row[data-id="${id}"]`).toggleClass('selected', isSelected);
+            updateSelectionState();
+        }
+
+        function updateSelectionState() {
+            const selectedCount = selectedDataSetIds.size;
+            const visibleCount = filteredDataSets.length;
+            const totalCount = allDataSets.length;
+            const helper = $('#selectionHelper');
+
+            if (selectedCount > 0) {
+                helper.addClass('valid');
+                helper.html(`<i class="fas fa-check-circle"></i> <strong>${selectedCount} formulaire(s) sélectionné(s)</strong> sur ${totalCount}. ${visibleCount} visible(s).`);
+                $('#btnText').text(`Exporter ${selectedCount} formulaire(s)`);
+            } else {
+                helper.removeClass('valid');
+                helper.html(`Aucun formulaire sélectionné. ${visibleCount} visible(s) sur ${totalCount}.`);
+                $('#btnText').text('Exporter');
+            }
+        }
+
+        function getDataSetName(dataSet) {
+            return dataSet.displayName || dataSet.name || dataSet.id;
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function hasValidDHIS2Config() {
+            const config = dhis2Session.getConfig();
+            return Boolean(config && config.url && config.authHeader);
+        }
+
+        function clearInvalidDHIS2Config() {
+            const config = dhis2Session.getConfig();
+            if (config && (!config.url || !config.authHeader)) {
+                dhis2Session.logout();
+            }
+        }
+
+        function showAlert(type, message) {
+            const alert = $('#alertBox');
+            alert.removeClass('success error').addClass(type);
+            alert.text(message);
+            alert.fadeIn();
+            setTimeout(() => alert.fadeOut(), 6000);
+        }
+
+        function showSummary(summary) {
+            const labels = {
+                dataSets: 'Formulaires / DataSets',
+                sections: 'Sections',
+                dataElements: 'Éléments de données',
+                categoryCombos: 'CategoryCombos',
+                categories: 'Catégories',
+                categoryOptions: 'Options de catégorie',
+                categoryOptionCombos: 'Combinaisons d’options',
+                categoryOptionGroups: 'CategoryOptionGroups',
+                categoryOptionGroupSets: 'CategoryOptionGroupSets'
+            };
+
+            const html = Object.keys(labels).map(key => `
+                <div class="summary-item">
+                    <span class="summary-label">${labels[key]}</span>
+                    <span class="summary-value">${summary[key] ?? 0}</span>
+                </div>
+            `).join('');
+
+            $('#summaryContent').html(html);
+            $('#summaryBox').fadeIn();
+        }
+
+        function createRequestId() {
+            const randomPart = Math.random().toString(36).slice(2, 10);
+            return `form-export-${Date.now()}-${randomPart}`;
+        }
+
+        function appendClientLog(message) {
+            const time = new Date().toLocaleTimeString('fr-FR');
+            appendLogLines([`[${time}] ${message}`]);
+        }
+
+        function appendLogLines(lines) {
+            const content = $('#debugLogContent');
+            const existing = new Set(content.find('.debug-log-line').map(function () {
+                return $(this).text();
+            }).get());
+
+            lines.forEach(line => {
+                if (!existing.has(line)) {
+                    content.append(`<div class="debug-log-line">${escapeHtml(line)}</div>`);
+                }
+            });
+
+            content.scrollTop(content[0].scrollHeight);
+        }
+
+        function resetDebugLog(requestId) {
+            $('#debugLogBox').show();
+            $('#debugLogId').text(requestId);
+            $('#debugLogContent').empty();
+            appendClientLog('Préparation de la requête export côté navigateur');
+        }
+
+        function startLogPolling(requestId) {
+            stopLogPolling();
+            appendClientLog('Démarrage lecture périodique du journal serveur');
+
+            logPollingTimer = setInterval(async () => {
+                try {
+                    const response = await $.ajax({
+                        url: 'api/export-form-log.php',
+                        method: 'GET',
+                        dataType: 'json',
+                        data: { requestId }
+                    });
+
+                    if (response.success && Array.isArray(response.lines)) {
+                        appendLogLines(response.lines);
+                    }
+                } catch (error) {
+                    appendClientLog(`Lecture journal serveur impossible pour le moment: ${error.status || 'réseau'}`);
+                }
+            }, 1500);
+        }
+
+        function stopLogPolling() {
+            if (logPollingTimer) {
+                clearInterval(logPollingTimer);
+                logPollingTimer = null;
+            }
+        }
+
+        async function exportForms(uids, options) {
+            const btn = $('#btnExport');
+            const btnText = $('#btnText');
+            const originalText = btnText.text();
+            const requestId = createRequestId();
+
+            btn.prop('disabled', true);
+            btnText.html('<i class="fas fa-spinner fa-spin"></i> Export en cours...');
+            $('#alertBox').fadeOut();
+            $('#summaryBox').fadeOut();
+            resetDebugLog(requestId);
+
+            try {
+                const config = dhis2Session.getConfig();
+                if (!config || !config.url || !config.authHeader) {
+                    clearInvalidDHIS2Config();
+                    throw new Error('Session DHIS2 incomplète. Veuillez vous reconnecter depuis la page d’accueil.');
+                }
+
+                appendClientLog(`${uids.length} formulaire(s) sélectionné(s): ${uids.join(', ')}`);
+                appendClientLog(`Instance DHIS2: ${config.url}`);
+                appendClientLog('Envoi de la requête au serveur PHP');
+                startLogPolling(requestId);
+                showToast('info', 'Export en cours', `Récupération de ${uids.length} formulaire(s)...`);
+
+                const response = await $.ajax({
+                    url: 'api/export-form-deps.php',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        dhis2_url: config.url,
+                        dhis2_auth: config.authHeader,
+                        requestId,
+                        dataSetUids: uids.join(';'),
+                        ...options
+                    })
+                });
+
+                if (!response.success) {
+                    throw new Error(response.message || 'Erreur lors de l’export.');
+                }
+
+                appendClientLog('Réponse serveur reçue, génération du fichier JSON');
+                const blob = new Blob([JSON.stringify(response.data, null, 2)], {
+                    type: 'application/json'
+                });
+                const filename = `formulaire-dependances-export-${new Date().toISOString().split('T')[0]}.json`;
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                showAlert('success', `Export téléchargé : ${filename}`);
+                showSummary(response.summary);
+                showToast('success', 'Export réussi', `${response.summary.dataSets} formulaire(s) exporté(s)`);
+                appendClientLog(`Export terminé, fichier généré: ${filename}`);
+            } catch (error) {
+                console.error('Erreur export formulaire:', error);
+                const message = error.responseJSON?.message || error.message || 'Impossible d’exporter les formulaires.';
+                showAlert('error', `Erreur : ${message}`);
+                showToast('error', 'Erreur d’export', message);
+                appendClientLog(`ERREUR: ${message}`);
+            } finally {
+                stopLogPolling();
+                appendClientLog('Fin du suivi navigateur');
+                btn.prop('disabled', false);
+                btnText.text(originalText);
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Métadonnées - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+    <link rel="stylesheet" href="css/import-metadata.css">
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-file-import"></i>
+                    <h1>Import Métadonnées</h1>
+                </div>
+                <p class="subtitle">Importez et mettez à jour vos Unités d'Organisation et Utilisateurs via Excel ou
+                    JSON.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Source</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Mapping</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Dry Run</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Import</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Configuration -->
+        <section class="step-content glass-card" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-cog"></i>
+                <h2>Configuration de l'Import</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Type d'Objet Cible</label>
+                    <div class="type-selector">
+                        <label class="type-option active">
+                            <input type="radio" name="entityType" value="organisationUnits" checked>
+                            <i class="fas fa-sitemap"></i>
+                            <span>Unités d'Organisation</span>
+                        </label>
+                        <label class="type-option">
+                            <input type="radio" name="entityType" value="users">
+                            <i class="fas fa-user"></i>
+                            <span>Utilisateurs</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fichier Source (XLSX ou JSON)</label>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Glissez votre fichier ici</h3>
+                        <p>ou cliquez pour parcourir</p>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.json" hidden>
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <i class="fas fa-file-alt"></i>
+                            <span id="fileName">fichier.xlsx</span>
+                            <button class="btn-icon" id="btnRemoveFile"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="btnToMapping" disabled>
+                    Suivant : Mapping
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Mapping -->
+        <section class="step-content glass-card" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-exchange-alt"></i>
+                <h2>Mapping des Colonnes</h2>
+                <div class="header-actions">
+                    <span class="badge" id="sourceFormatBadge">EXCEL</span>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div id="mappingContainer">
+                    <p class="text-muted mb-4">Associez les colonnes de votre fichier Excel aux champs DHIS2
+                        correspondants.</p>
+
+                    <div class="mapping-table-wrapper">
+                        <table class="mapping-table">
+                            <thead>
+                                <tr>
+                                    <th>Colonne Excel</th>
+                                    <th>Exemple de Donnée</th>
+                                    <th>Champ DHIS2</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mappingTableBody">
+                                <!-- Mapping rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="jsonPreviewContainer" style="display: none;">
+                    <p class="text-muted">Aperçu de la structure JSON détectée.</p>
+                    <pre class="code-preview" id="jsonPreview"></pre>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" onclick="appState.goToStep(1)">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="btnToDryRun">
+                    Suivant : Validation (Dry Run)
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Dry Run -->
+        <section class="step-content glass-card" id="step3" data-step="3" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-flask"></i>
+                <h2>Simulation (Dry Run)</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Cette étape simule l'importation pour détecter les erreurs (doublons, parents manquants, formats
+                        invalides) sans modifier les données.</p>
+                </div>
+
+                <div class="progress-container" id="dryRunProgress" style="display: none;">
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">Traitement... 0%</div>
+                </div>
+
+                <div class="validation-report" id="dryRunReport" style="display: none;">
+                    <!-- Report injected here -->
+                </div>
+
+                <div class="console-log" id="dryRunLog">
+                    <div class="log-entry system">Prêt pour la simulation...</div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" onclick="appState.goToStep(2)">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-success" id="btnRunDryRun">
+                    <i class="fas fa-play"></i> Lancer la Simulation
+                </button>
+                <button class="btn btn-large btn-gradient" id="btnToImport" disabled>
+                    Suivant : Import Réel
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 4: Import -->
+        <section class="step-content glass-card" id="step4" data-step="4" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-upload"></i>
+                <h2>Importation Finale</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Attention : Cette action va modifier les données sur le serveur. Assurez-vous d'avoir validé le
+                        Dry Run.</p>
+                </div>
+
+                <div class="progress-container" id="importProgress" style="display: none;">
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">Importation... 0%</div>
+                </div>
+
+                <div class="import-stats" id="importStats" style="display: none;">
+                    <div class="stat-card success">
+                        <span class="stat-value" id="statCreated">0</span>
+                        <span class="stat-label">Créés</span>
+                    </div>
+                    <div class="stat-card warning">
+                        <span class="stat-value" id="statUpdated">0</span>
+                        <span class="stat-label">Mis à jour</span>
+                    </div>
+                    <div class="stat-card error">
+                        <span class="stat-value" id="statIgnored">0</span>
+                        <span class="stat-label">Ignorés/Erreurs</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" onclick="appState.goToStep(3)">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-danger" id="btnRunImport">
+                    <i class="fas fa-cloud-upload-alt"></i> CONFIRMER ET IMPORTER
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- DHIS2 Auth Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <!-- ... Auth Form (Standard) ... -->
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback" style="display: none;"></div>
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label>URL</label><input type="text" id="dhis2UrlInput" class="auth-input" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label>Utilisateur</label><input type="text" id="dhis2UsernameInput" class="auth-input"
+                            required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label>Mot de passe</label><input type="password" id="dhis2PasswordInput" class="auth-input"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">Connexion</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script src="js/config.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+    <script src="js/import-metadata.js"></script>
+
+    <script>
+        if (typeof showToast === 'undefined') {
+            window.showToast = function (type, title, message) {
+                const toast = $(`<div class="toast toast-${type}"><div class="toast-content"><div class="toast-title">${title}</div><div>${message}</div></div></div>`);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(300, () => toast.remove()), 4000);
+            };
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Excel vers DHIS2</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Select2 for searchable selects -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/select2-custom.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <!-- Left side: Home button -->
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <!-- Right side: DHIS2 status and connection -->
+        <div class="top-bar-content">
+            <!-- DHIS2 Connection Status -->
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-file-import"></i>
+                    <h1>Import Excel vers DHIS2</h1>
+                </div>
+                <p class="subtitle">Importez vos données Excel dans les formulaires DHIS2 avec validation</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Formulaire</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Fichier</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Mapping</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Validation</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Select DataSet Section -->
+        <section class="step-content glass-card" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-list-alt"></i>
+                <h2>Étape 1 : Sélectionner le Formulaire (DataSet)</h2>
+            </div>
+
+            <div class="card-body">
+                <p class="info-text">
+                    <i class="fas fa-info-circle"></i>
+                    Veuillez d'abord vous connecter à DHIS2, puis sélectionner le formulaire dans lequel vous souhaitez
+                    importer des données.
+                </p>
+
+                <div class="form-group">
+                    <label for="dataSetSelect">DataSet (Formulaire)</label>
+                    <select id="dataSetSelect" class="form-select" disabled>
+                        <option value="">-- Sélectionnez d'abord une connexion DHIS2 --</option>
+                    </select>
+                </div>
+
+                <div id="dataSetDetails" style="display: none; margin-top: 20px;">
+                    <div class="info-box">
+                        <h4>Détails du template</h4>
+                        <p>Téléchargez le modèle Excel pour ce formulaire. Ce modèle contiendra toutes les colonnes
+                            nécessaires (Unités d'organisation, Période, Éléments de données).</p>
+                        <button id="btnDownloadTemplate" class="btn btn-secondary">
+                            <i class="fas fa-download"></i> Télécharger le Modèle Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="nextToStep2" disabled>
+                    Suivant : Charger les données
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Upload Section -->
+        <section class="step-content glass-card" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h2>Étape 2 : Importer le fichier Excel rempli</h2>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-content">
+                    <i class="fas fa-file-excel upload-icon"></i>
+                    <h3>Glissez-déposez votre fichier Excel ici</h3>
+                    <p>ou cliquez pour parcourir</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i>
+                        Parcourir les fichiers
+                    </button>
+                    <div class="file-info">
+                        <small>Utilisez le modèle téléchargé à l'étape précédente.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="file-preview" id="filePreview" style="display: none;">
+                <div class="file-item">
+                    <i class="fas fa-file-excel"></i>
+                    <div class="file-details">
+                        <span class="file-name" id="fileName"></span>
+                        <span class="file-size" id="fileSize"></span>
+                    </div>
+                    <button class="btn-icon" onclick="removeFile()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep1">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="nextToStep3" disabled>
+                    Suivant : Mapper les colonnes
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Mapping Section -->
+        <section class="step-content glass-card" id="step3" data-step="3" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-random"></i>
+                <h2>Étape 3 : Mapping des Colonnes</h2>
+            </div>
+
+            <div class="card-body">
+                <p class="info-text">
+                    Associez les colonnes de votre fichier Excel aux champs du formulaire DHIS2. Le système a tenté une
+                    correspondance automatique.
+                </p>
+
+                <div class="table-container">
+                    <table class="results-table" id="mappingTable">
+                        <thead>
+                            <tr>
+                                <th>Colonne Excel</th>
+                                <th>Champ DHIS2 (Data Element)</th>
+                                <th>Catégorie (OptionCombo)</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mappingTableBody">
+                            <!-- Rows will be dynamically added -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep2">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="nextToStep4">
+                    Suivant : Validation (Dry Run)
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 4: Dry Run & Import Section -->
+        <section class="step-content glass-card" id="step4" data-step="4" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-tasks"></i>
+                <h2>Étape 4 : Validation et Import</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="actions-panel">
+                    <button class="btn btn-warning" id="btnDryRun">
+                        <i class="fas fa-bug"></i> Lancer la Simulation (Dry Run)
+                    </button>
+                </div>
+
+                <!-- Console de log pour le Dry Run -->
+                <div class="log-console" id="dryRunLog" style="display: none; margin-top: 20px;">
+                    <div class="log-header">
+                        <h4>Rapport de Simulation</h4>
+                        <span id="dryRunStatus" class="badge">En attente</span>
+                    </div>
+                    <div class="log-content" id="dryRunOutput">
+                        <!-- Logs go here -->
+                    </div>
+                </div>
+
+                <div id="importSection"
+                    style="display: none; margin-top: 30px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                    <h3><i class="fas fa-check-circle" style="color: #4facfe;"></i> Simulation réussie</h3>
+                    <p>Vous pouvez maintenant importer les données dans DHIS2.</p>
+                    <button class="btn btn-large btn-success" id="btnImport">
+                        <i class="fas fa-cloud-upload-alt"></i> Importer les Données
+                    </button>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep3">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- DHIS2 Login Modal (Copied from template) -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback" style="display: none;">
+                    <div class="feedback-icon"><i class="fas fa-info-circle"></i></div>
+                    <div class="feedback-content">
+                        <div class="feedback-title" id="authFeedbackTitle">Information</div>
+                        <div class="feedback-message" id="authFeedbackMessage"></div>
+                    </div>
+                    <button type="button" class="feedback-close" onclick="hideAuthFeedback()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+    <script src="js/excel-import-dhis2.js"></script>
+
+    <script>
+        // Toast helper if not present in included scripts
+        if (typeof showToast === 'undefined') {
+            window.showToast = function (type, title, message) {
+                const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+                const toast = $(`<div class="toast toast-${type}"><i class="fas ${icons[type]}"></i><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div></div>`);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+            };
+        }
+    </script>
+</body>
+
+</html>

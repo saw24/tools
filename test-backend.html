@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Backend DHIS2</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .test-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .test-section h2 {
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .test-button {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 8px 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .test-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .result-box pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .status-badge.success {
+            background: rgba(79, 172, 254, 0.2);
+            color: #4facfe;
+        }
+
+        .status-badge.error {
+            background: rgba(245, 87, 108, 0.2);
+            color: #f5576c;
+        }
+
+        .status-badge.pending {
+            background: rgba(250, 112, 154, 0.2);
+            color: #fa709a;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <!-- Left side: Home button -->
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <!-- Right side: DHIS2 status and connection -->
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <header style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 36px; margin-bottom: 12px;">
+                <i class="fas fa-vial" style="color: #667eea;"></i>
+                Test Backend DHIS2
+            </h1>
+            <p style="color: var(--text-secondary);">
+                Testez les fonctionnalités du gestionnaire de session DHIS2
+            </p>
+
+        </header>
+
+        <!-- Connection Status -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-plug"></i>
+                État de la connexion
+                <span class="status-badge pending" id="connectionStatus">Non connecté</span>
+            </h2>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Connectez-vous d'abord à une instance DHIS2 en cliquant sur le bouton en haut à droite.
+            </p>
+            <button class="test-button" onclick="testConnection()">
+                <i class="fas fa-check-circle"></i> Tester la connexion
+            </button>
+            <div class="result-box" id="connectionResult" style="display: none;"></div>
+        </div>
+
+        <!-- User Info -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-user"></i>
+                Informations utilisateur
+            </h2>
+            <button class="test-button" onclick="getUserInfo()">
+                <i class="fas fa-id-card"></i> Obtenir /api/me
+            </button>
+            <div class="result-box" id="userInfoResult" style="display: none;"></div>
+        </div>
+
+        <!-- System Info -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-server"></i>
+                Informations système
+            </h2>
+            <button class="test-button" onclick="getSystemInfo()">
+                <i class="fas fa-info-circle"></i> Obtenir /api/system/info
+            </button>
+            <div class="result-box" id="systemInfoResult" style="display: none;"></div>
+        </div>
+
+        <!-- Data Elements -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-database"></i>
+                Éléments de données
+            </h2>
+            <button class="test-button" onclick="getDataElements()">
+                <i class="fas fa-list"></i> Obtenir Data Elements (5 premiers)
+            </button>
+            <button class="test-button" onclick="searchDataElements()">
+                <i class="fas fa-search"></i> Rechercher "ANC"
+            </button>
+            <div class="result-box" id="dataElementsResult" style="display: none;"></div>
+        </div>
+
+        <!-- Organisation Units -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-sitemap"></i>
+                Unités d'organisation
+            </h2>
+            <button class="test-button" onclick="getOrgUnits()">
+                <i class="fas fa-building"></i> Obtenir Org Units (Niveau 1)
+            </button>
+            <div class="result-box" id="orgUnitsResult" style="display: none;"></div>
+        </div>
+
+        <!-- Indicators -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-chart-line"></i>
+                Indicateurs
+            </h2>
+            <button class="test-button" onclick="getIndicators()">
+                <i class="fas fa-chart-bar"></i> Obtenir Indicators (5 premiers)
+            </button>
+            <div class="result-box" id="indicatorsResult" style="display: none;"></div>
+        </div>
+
+        <!-- Data Sets -->
+        <div class="test-section">
+            <h2>
+                <i class="fas fa-table"></i>
+                Ensembles de données
+            </h2>
+            <button class="test-button" onclick="getDataSets()">
+                <i class="fas fa-database"></i> Obtenir Data Sets (5 premiers)
+            </button>
+            <div class="result-box" id="dataSetsResult" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.40.0" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        // Toast function
+        window.showToast = function (type, title, message) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type]}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+        };
+
+        // Update connection status
+        function updateConnectionStatus() {
+            const isConnected = dhis2Session.isConnected();
+            const badge = $('#connectionStatus');
+
+            if (isConnected) {
+                badge.removeClass('pending error').addClass('success').text('Connecté');
+            } else {
+                badge.removeClass('success error').addClass('pending').text('Non connecté');
+            }
+        }
+
+        // Listen to connection events
+        $(document).on('dhis2:connected', function () {
+            updateConnectionStatus();
+        });
+
+        $(document).on('dhis2:disconnected', function () {
+            updateConnectionStatus();
+        });
+
+        // Display result helper
+        function displayResult(elementId, data, error = false) {
+            const element = $('#' + elementId);
+            element.show();
+
+            if (error) {
+                element.html(`<pre style="color: #f5576c;">${JSON.stringify(data, null, 2)}</pre>`);
+            } else {
+                element.html(`<pre>${JSON.stringify(data, null, 2)}</pre>`);
+            }
+        }
+
+        // Test functions
+        async function testConnection() {
+            try {
+                const result = await dhis2Session.testConnection();
+                displayResult('connectionResult', result);
+                updateConnectionStatus();
+            } catch (error) {
+                displayResult('connectionResult', { error: error.message }, true);
+            }
+        }
+
+        async function getUserInfo() {
+            try {
+                const data = await dhis2Session.getCurrentUser();
+                displayResult('userInfoResult', data);
+            } catch (error) {
+                displayResult('userInfoResult', { error: error.message }, true);
+            }
+        }
+
+        async function getSystemInfo() {
+            try {
+                const data = await dhis2Session.getSystemInfo();
+                displayResult('systemInfoResult', data);
+            } catch (error) {
+                displayResult('systemInfoResult', { error: error.message }, true);
+            }
+        }
+
+        async function getDataElements() {
+            try {
+                const data = await dhis2Session.getDataElements({
+                    fields: 'id,name,displayName,valueType',
+                    pageSize: 5
+                });
+                displayResult('dataElementsResult', data);
+            } catch (error) {
+                displayResult('dataElementsResult', { error: error.message }, true);
+            }
+        }
+
+        async function searchDataElements() {
+            try {
+                const data = await dhis2Session.getDataElements({
+                    fields: 'id,name,displayName',
+                    filter: 'name:ilike:ANC',
+                    pageSize: 10
+                });
+                displayResult('dataElementsResult', data);
+            } catch (error) {
+                displayResult('dataElementsResult', { error: error.message }, true);
+            }
+        }
+
+        async function getOrgUnits() {
+            try {
+                const data = await dhis2Session.getOrganisationUnits({
+                    fields: 'id,name,level,path',
+                    filter: 'level:eq:1',
+                    pageSize: 5
+                });
+                displayResult('orgUnitsResult', data);
+            } catch (error) {
+                displayResult('orgUnitsResult', { error: error.message }, true);
+            }
+        }
+
+        async function getIndicators() {
+            try {
+                const data = await dhis2Session.getIndicators({
+                    fields: 'id,name,displayName,indicatorType[name]',
+                    pageSize: 5
+                });
+                displayResult('indicatorsResult', data);
+            } catch (error) {
+                displayResult('indicatorsResult', { error: error.message }, true);
+            }
+        }
+
+        async function getDataSets() {
+            try {
+                const data = await dhis2Session.getDataSets({
+                    fields: 'id,name,displayName,periodType',
+                    pageSize: 5
+                });
+                displayResult('dataSetsResult', data);
+            } catch (error) {
+                displayResult('dataSetsResult', { error: error.message }, true);
+            }
+        }
+
+        // Initialize
+        $(document).ready(function () {
+            updateConnectionStatus();
+        });
+    </script>
+</body>
+
+</html>

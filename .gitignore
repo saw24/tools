@@ -1,0 +1,41 @@
+# Excel Mapping - Git Ignore
+
+# Uploaded files
+uploads/*
+!uploads/.gitkeep
+
+# Exported files
+exports/*
+!exports/.gitkeep
+
+# Saved mappings
+saved_mappings/*
+!saved_mappings/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+error_log
+
+# Temporary files
+*.tmp
+*.temp
+
+# PHP
+vendor/
+composer.lock
+
+# Backup files
+*.bak
+*.backup

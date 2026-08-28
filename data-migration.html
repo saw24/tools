@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration de Données - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        /* Modern UI Styles */
+        :root {
+            --primary-glow: rgba(102, 126, 234, 0.4);
+            --secondary-glow: rgba(240, 147, 251, 0.4);
+            --success-glow: rgba(16, 185, 129, 0.4);
+        }
+
+        .step-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .section-header i {
+            font-size: 24px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .section-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Mapping Table Layout */
+        .mapping-container {
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .mapping-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .mapping-table th {
+            text-align: left;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .mapping-table td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+        }
+
+        .mapping-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .coc-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            font-family: monospace;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        .mapping-select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mapping-select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .mapping-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 20px;
+        }
+
+        /* Source/Target Selection */
+        .de-selection-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .de-selection-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .de-selection-card h3 {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .de-results {
+            max-height: 250px;
+            overflow-y: auto;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .de-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            transition: background 0.2s;
+        }
+
+        .de-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .de-item.selected {
+            background: rgba(102, 126, 234, 0.15);
+            border-left: 3px solid #667eea;
+        }
+
+        .de-item .de-id {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+            margin-top: 3px;
+        }
+
+        /* Info boxes */
+        .info-box {
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(102, 126, 234, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .info-box-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* Logs */
+        .logs-area {
+            background: #0d0d1a;
+            border-radius: 12px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            color: #d1d1e0;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+
+        .log-info {
+            color: #667eea;
+        }
+
+        .log-success {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .log-warning {
+            color: #f59e0b;
+        }
+
+        /* Animation */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide {
+            animation: slideIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="container step-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-exchange-alt"></i>
+                    <h1>Migration entre Éléments de Données</h1>
+                </div>
+                <p class="subtitle">Déplacez ou copiez des valeurs entre éléments de données avec mapping personnalisé
+                    des catégories.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Éléments</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Catégories</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Filtres</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Migration</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Element Selection -->
+        <section class="step-content animate-slide" id="step1">
+            <div class="glass-card">
+                <div class="section-header">
+                    <i class="fas fa-layer-group"></i>
+                    <h2>Étape 1 : Sélectionner les Éléments</h2>
+                </div>
+
+                <div class="de-selection-grid">
+                    <!-- Source Element -->
+                    <div class="de-selection-card">
+                        <h3><i class="fas fa-file-import"></i> Source (De)</h3>
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="sourceDeSearch" placeholder="Rechercher l'élément source...">
+                        </div>
+                        <div class="de-results" id="sourceDeResults">
+                            <div style="padding: 20px; text-align: center; color: var(--text-muted);">
+                                Connectez-vous pour voir les éléments.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Element -->
+                    <div class="de-selection-card">
+                        <h3><i class="fas fa-file-export"></i> Cible (Vers)</h3>
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="targetDeSearch" placeholder="Rechercher l'élément cible...">
+                        </div>
+                        <div class="de-results" id="targetDeResults">
+                            <div style="padding: 20px; text-align: center; color: var(--text-muted);">
+                                Connectez-vous pour voir les éléments.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-box" id="step1Summary" style="display: none;">
+                    <div class="info-box-header">
+                        <i class="fas fa-info-circle"></i>
+                        Sélection Actuelle
+                    </div>
+                    <div id="selectionSummaryText" style="font-size: 14px; line-height: 1.6;">
+                        <!-- Selection details will appear here -->
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button class="btn btn-large btn-gradient" id="btnToStep2" disabled>
+                        Configurer le mapping <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Category Mapping -->
+        <section class="step-content animate-slide" id="step2" style="display: none;">
+            <div class="glass-card">
+                <div class="section-header">
+                    <i class="fas fa-tags"></i>
+                    <h2>Étape 2 : Mapping des Catégories</h2>
+                </div>
+
+                <div class="info-box">
+                    <i class="fas fa-lightbulb"></i>
+                    Mappez chaque option de catégorie source vers une option cible. Si les structures sont identiques,
+                    le mapping sera automatique.
+                </div>
+
+                <div id="mappingLoading" style="text-align: center; padding: 40px; display: none;">
+                    <i class="fas fa-snowflake fa-spin"
+                        style="font-size: 32px; color: #667eea; margin-bottom: 20px;"></i>
+                    <p>Analyse des combinaisons de catégories...</p>
+                </div>
+
+                <div class="mapping-container" id="cocMappingArea">
+                    <table class="mapping-table">
+                        <thead>
+                            <tr>
+                                <th>Source (Catégorie Option Combo)</th>
+                                <th style="width: 50px;"></th>
+                                <th>Cible (Catégorie Option Combo)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mappingTableBody">
+                            <!-- Mapping rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="step-actions" style="margin-top: 30px;">
+                    <button class="btn btn-large" onclick="goToStep(1)">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </button>
+                    <button class="btn btn-large btn-gradient" id="btnToStep3">
+                        Définir les filtres <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Filters (OUs and Periods) -->
+        <section class="step-content animate-slide" id="step3" style="display: none;">
+            <div class="glass-card">
+                <div class="section-header">
+                    <i class="fas fa-filter"></i>
+                    <h2>Étape 3 : Filtres de Données</h2>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <!-- Org Units -->
+                    <div>
+                        <h3
+                            style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">
+                            <i class="fas fa-sitemap"></i> Unités d'Organisation
+                        </h3>
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="ouSearch" placeholder="Rechercher une unité...">
+                        </div>
+                        <div class="org-unit-tree" id="ouTree"
+                            style="height: 300px; border: 1px solid var(--border-color); border-radius: 12px; overflow-y: auto; padding: 15px; background: rgba(0,0,0,0.1);">
+                            <!-- Tree -->
+                        </div>
+                        <div id="selectedOuInfo" style="margin-top: 10px; font-size: 12px; color: #10b981;">
+                            Aucune unité sélectionnée
+                        </div>
+                    </div>
+
+                    <!-- Periods -->
+                    <div>
+                        <h3
+                            style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">
+                            <i class="fas fa-calendar-alt"></i> Périodes
+                        </h3>
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="peSearch" placeholder="Filtrer les périodes...">
+                        </div>
+                        <div class="de-results" id="peList" style="height: 300px;">
+                            <!-- Period check boxes -->
+                        </div>
+                        <div id="selectedPeCount" style="margin-top: 10px; font-size: 12px; color: #10b981;">
+                            0 période sélectionnée
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-actions" style="margin-top: 30px;">
+                    <button class="btn btn-large" onclick="goToStep(2)">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </button>
+                    <button class="btn btn-large btn-gradient" id="btnToStep4" disabled>
+                        Aperçu de la migration <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Preview and Execution -->
+        <section class="step-content animate-slide" id="step4" style="display: none;">
+            <div class="glass-card">
+                <div class="section-header">
+                    <i class="fas fa-rocket"></i>
+                    <h2>Étape 4 : Lancement de la Migration</h2>
+                </div>
+
+                <div id="migrationPreviewArea">
+                    <div class="info-box">
+                        <div id="previewStats">
+                            Analyse des données en cours...
+                        </div>
+                    </div>
+
+                    <div class="logs-area" id="migrationLogs">
+                        <div class="log-entry"><span class="log-time">[H:i:s]</span> <span class="log-info">Prêt pour la
+                                migration.</span></div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 15px;">
+                        <input type="checkbox" id="copyMode" checked style="width: 20px; height: 20px;">
+                        <label for="copyMode" style="cursor: pointer;">
+                            <strong>Mode Copie</strong> (Conserve les données sources)
+                            <div style="font-size: 11px; color: var(--text-muted);">Si décoché, les données seront
+                                déplacées (supprimées de la source après migration - non implémenté par sécurité)</div>
+                        </label>
+                    </div>
+
+                    <div class="step-actions" style="margin-top: 30px;">
+                        <button class="btn btn-large" id="btnBackTo3">
+                            <i class="fas fa-arrow-left"></i> Retour
+                        </button>
+                        <button class="btn btn-large btn-success" id="btnStartMigration">
+                            <i class="fas fa-play"></i> Lancer la Migration
+                        </button>
+                    </div>
+                </div>
+
+                <div id="migrationProgress" style="display: none; padding: 20px; text-align: center;">
+                    <div class="progress-container" style="margin-bottom: 20px;">
+                        <div id="migrationProgressBar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div id="migrationProgressText">Progression : 0%</div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/stats-manager.js"></script>
+    <script src="js/interaction-manager.js"></script>
+    <script src="js/data-migration.js"></script>
+</body>
+
+</html>

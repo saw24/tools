@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Démo - Excel Mapping</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .demo-container {
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 2rem;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .demo-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 1rem;
+        }
+
+        .demo-section h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .demo-section p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .screenshot {
+            width: 100%;
+            border-radius: 1rem;
+            margin-top: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="demo-container">
+        <h1>🎯 Excel Mapping Intelligent</h1>
+        <p class="subtitle">Application moderne pour mapper automatiquement vos colonnes Excel</p>
+
+        <ul class="feature-list">
+            <li>
+                <div class="icon">✨</div>
+                <div>
+                    <strong>Design Glassmorphism</strong>
+                    <p style="color: #999; font-size: 0.9rem;">Interface élégante avec effets de transparence</p>
+                </div>
+            </li>
+            <li>
+                <div class="icon">🤖</div>
+                <div>
+                    <strong>Mapping Automatique</strong>
+                    <p style="color: #999; font-size: 0.9rem;">Algorithme de Levenshtein pour trouver les
+                        correspondances</p>
+                </div>
+            </li>
+            <li>
+                <div class="icon">📊</div>
+                <div>
+                    <strong>Multi-Feuilles</strong>
+                    <p style="color: #999; font-size: 0.9rem;">Sélection indépendante des feuilles source et cible</p>
+                </div>
+            </li>
+            <li>
+                <div class="icon">🔍</div>
+                <div>
+                    <strong>Recherche & Filtres</strong>
+                    <p style="color: #999; font-size: 0.9rem;">Trouvez rapidement les correspondances importantes</p>
+                </div>
+            </li>
+            <li>
+                <div class="icon">💾</div>
+                <div>
+                    <strong>Export Excel</strong>
+                    <p style="color: #999; font-size: 0.9rem;">Téléchargez vos résultats en un clic</p>
+                </div>
+            </li>
+        </ul>
+
+        <div style="text-align: center; margin: 2rem 0;">
+            <a href="index.html" class="btn">🚀 Lancer l'Application</a>
+        </div>
+
+        <div class="demo-section">
+            <h3>📖 Comment ça marche ?</h3>
+            <p>
+                <strong>1.</strong> Importez votre fichier Excel (drag & drop ou parcourir)<br>
+                <strong>2.</strong> Sélectionnez la feuille et colonne source à mapper<br>
+                <strong>3.</strong> Sélectionnez la feuille et colonne cible de référence<br>
+                <strong>4.</strong> Lancez le mapping automatique<br>
+                <strong>5.</strong> Vérifiez et modifiez les correspondances si nécessaire<br>
+                <strong>6.</strong> Exportez les résultats en Excel
+            </p>
+        </div>
+
+        <div class="demo-section">
+            <h3>🎨 Fonctionnalités Premium</h3>
+            <p>
+                • <strong>Animations fluides</strong> pour une expérience utilisateur agréable<br>
+                • <strong>Responsive design</strong> fonctionne sur tous les appareils<br>
+                • <strong>Scores de confiance</strong> avec codes couleur (vert/orange/rouge)<br>
+                • <strong>Modification manuelle</strong> des correspondances<br>
+                • <strong>Pagination intelligente</strong> pour grandes quantités de données<br>
+                • <strong>Toast notifications</strong> pour chaque action
+            </p>
+        </div>
+
+        <div class="demo-section">
+            <h3>⚡ Démarrage Rapide</h3>
+            <p>
+                <strong>Avec le script de démarrage :</strong><br>
+                <code
+                    style="background: #fff; padding: 0.5rem; border-radius: 0.25rem; display: inline-block; margin: 0.5rem 0;">./start.sh</code>
+                <br><br>
+                <strong>Ou manuellement :</strong><br>
+                <code
+                    style="background: #fff; padding: 0.5rem; border-radius: 0.25rem; display: inline-block; margin: 0.5rem 0;">php -S localhost:8000</code>
+                <br><br>
+                Puis ouvrez <strong>http://localhost:8000</strong> dans votre navigateur
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 0.9rem;">
+                Développé avec ❤️ • Version 1.0.0 • Décembre 2024
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

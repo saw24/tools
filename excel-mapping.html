@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Mapping Intelligent - Multi-Feuilles</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Select2 for searchable selects -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/select2-custom.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <!-- Left side: Home button -->
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <!-- Right side: DHIS2 status and connection -->
+        <div class="top-bar-content">
+            <!-- DHIS2 Connection Status -->
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <!--div class="header-actions">
+                    <a href="index.html" class="back-button">
+                        <i class="fas fa-home"></i> Retour à l'accueil
+                    </a>
+                </div-->
+                <div class="logo-section">
+                    <i class="fas fa-table-columns"></i>
+                    <h1>Excel Mapping Intelligent</h1>
+                </div>
+                <p class="subtitle">Mappez automatiquement vos colonnes Excel avec l'IA</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Fichier</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Colonnes</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Résultats</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Upload Section -->
+        <section class="upload-section glass-card step-content" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h2>Étape 1 : Importer votre fichier</h2>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-content">
+                    <i class="fas fa-file-excel upload-icon"></i>
+                    <h3>Glissez-déposez votre fichier Excel ici</h3>
+                    <p>ou cliquez pour parcourir</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i>
+                        Parcourir les fichiers
+                    </button>
+                    <div class="file-info">
+                        <small>Formats acceptés: .xlsx, .xls, .csv</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="file-preview" id="filePreview" style="display: none;">
+                <div class="file-item">
+                    <i class="fas fa-file-excel"></i>
+                    <div class="file-details">
+                        <span class="file-name" id="fileName"></span>
+                        <span class="file-size" id="fileSize"></span>
+                    </div>
+                    <button class="btn-icon" onclick="removeFile()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="step-actions" id="step1Actions" style="display: none;">
+                <button class="btn btn-large btn-gradient" id="nextToStep2">
+                    Suivant : Sélectionner les colonnes
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Configuration Section -->
+        <section class="config-section step-content" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-columns"></i>
+                <h2>Étape 2 : Sélectionner les colonnes à mapper</h2>
+            </div>
+
+            <div class="config-grid">
+                <!-- Source Configuration -->
+                <div class="config-card glass-card">
+                    <div class="card-header source-header">
+                        <i class="fas fa-database"></i>
+                        <h3>Source de données</h3>
+                        <span class="badge">À mapper</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="sourceSheet">
+                                <i class="fas fa-file-alt"></i>
+                                Feuille source
+                            </label>
+                            <select id="sourceSheet" class="form-select">
+                                <option value="">Sélectionnez une feuille...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="sourceColumn">
+                                <i class="fas fa-columns"></i>
+                                Colonne source
+                            </label>
+                            <select id="sourceColumn" class="form-select" disabled>
+                                <option value="">Sélectionnez une colonne...</option>
+                            </select>
+                        </div>
+                        <div class="stats-box">
+                            <div class="stat-item">
+                                <span class="stat-label">Lignes</span>
+                                <span class="stat-value" id="sourceRowCount">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Valeurs uniques</span>
+                                <span class="stat-value" id="sourceUniqueCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Target Configuration -->
+                <div class="config-card glass-card">
+                    <div class="card-header target-header">
+                        <i class="fas fa-bullseye"></i>
+                        <h3>Cible de référence</h3>
+                        <span class="badge">Dictionnaire</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label for="targetSheet">
+                                <i class="fas fa-file-alt"></i>
+                                Feuille cible
+                            </label>
+                            <select id="targetSheet" class="form-select">
+                                <option value="">Sélectionnez une feuille...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="targetColumn">
+                                <i class="fas fa-columns"></i>
+                                Colonne cible
+                            </label>
+                            <select id="targetColumn" class="form-select" disabled>
+                                <option value="">Sélectionnez une colonne...</option>
+                            </select>
+                        </div>
+                        <div class="stats-box">
+                            <div class="stat-item">
+                                <span class="stat-label">Lignes</span>
+                                <span class="stat-value" id="targetRowCount">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Valeurs uniques</span>
+                                <span class="stat-value" id="targetUniqueCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapping Mode Toggle -->
+            <div class="mapping-mode-card glass-card" style="margin-top: 1.5rem;">
+                <div class="mapping-mode-header">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Mode de correspondance</span>
+                </div>
+                <div class="mapping-mode-options">
+                    <div class="mode-option active" id="modeIntelligent">
+                        <div class="mode-icon"><i class="fas fa-magic"></i></div>
+                        <div class="mode-details">
+                            <strong>Mapping Intelligent</strong>
+                            <small>Levenshtein, acronymes, correspondances partielles</small>
+                        </div>
+                        <div class="mode-check"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                    <div class="mode-option" id="modeStrict">
+                        <div class="mode-icon"><i class="fas fa-equals"></i></div>
+                        <div class="mode-details">
+                            <strong>Mapping Strict</strong>
+                            <small>Correspondance exacte uniquement (insensible à la casse)</small>
+                        </div>
+                        <div class="mode-check"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                </div>
+                <div class="ai-settings-panel" id="aiSettingsPanel">
+                    <label class="ai-toggle">
+                        <input type="checkbox" id="enableAiMapping">
+                        <span>Amélioration par IA</span>
+                    </label>
+                    <div class="ai-settings-grid" id="aiSettingsFields" style="display: none;">
+                        <label>
+                            Provider
+                            <select id="aiProvider">
+                                <option value="ollama">Ollama local</option>
+                                <option value="openai">OpenAI compatible</option>
+                            </select>
+                        </label>
+                        <label>
+                            Modèle
+                            <input type="text" id="aiModel" placeholder="llama3.1:8b">
+                        </label>
+                        <label>
+                            URL
+                            <input type="text" id="aiBaseUrl" placeholder="http://localhost:11434">
+                        </label>
+                        <label id="aiTokenField">
+                            Token
+                            <input type="password" id="aiToken" placeholder="Token API">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep1">
+                    <i class="fas fa-arrow-left"></i>
+                    Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="mapButton" disabled>
+                    <i class="fas fa-magic" id="mapButtonIcon"></i>
+                    <span id="mapButtonLabel">Lancer le Mapping Intelligent</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Progress Section -->
+        <section class="progress-section" id="progressSection" style="display: none;">
+            <div class="glass-card">
+                <div class="progress-content">
+                    <div class="spinner"></div>
+                    <h3 id="progressTitle">Analyse en cours...</h3>
+                    <p id="progressDescription">Calcul des correspondances avec l'algorithme de Levenshtein</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Results Section -->
+        <section class="results-section step-content" id="step3" data-step="3" style="display: none;">
+            <div class="glass-card">
+                <div class="section-header" style="margin-bottom: 1.5rem;">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <h2>Étape 3 : Résultats du Mapping</h2>
+                </div>
+
+                <div class="results-header">
+                    <div class="results-title">
+                        <span class="results-count" id="resultsCount">0 entrées</span>
+                    </div>
+                    <div class="results-actions">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Rechercher...">
+                        </div>
+                        <button class="btn btn-success" id="exportButton">
+                            <i class="fas fa-download"></i>
+                            Exporter en Excel
+                        </button>
+                    </div>
+                </div>
+
+
+
+                <!-- Results Table -->
+                <div class="table-container">
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th class="col-index">#</th>
+                                <th class="col-source">
+                                    <i class="fas fa-database"></i>
+                                    Valeur Source
+                                </th>
+                                <th class="col-target">
+                                    <i class="fas fa-bullseye"></i>
+                                    Valeur Mappée
+                                </th>
+                                <th class="col-score">
+                                    <i class="fas fa-bullseye"></i>
+                                    Score
+                                </th>
+                                <th class="col-status">
+                                    <i class="fas fa-info-circle"></i>
+                                    Statut
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Results will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="pagination">
+                    <button class="btn-icon" id="prevPage" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="page-info" id="pageInfo">Page 1 sur 1</span>
+                    <button class="btn-icon" id="nextPage" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="step-actions" style="margin-top: 2rem;">
+                    <button class="btn btn-large" id="backToStep2">
+                        <i class="fas fa-arrow-left"></i>
+                        Retour à la sélection
+                    </button>
+                    <button class="btn btn-large btn-success" id="exportButton2">
+                        <i class="fas fa-download"></i>
+                        Exporter les résultats
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Export Options Modal -->
+    <div class="modal-overlay" id="exportModal" style="display: none;">
+        <div class="glass-card modal-content">
+            <div class="modal-header">
+                <i class="fas fa-file-export"></i>
+                <h2>Options d'exportation</h2>
+                <button class="btn-icon close-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="export-option" id="btnSimpleExport">
+                    <div class="option-icon">
+                        <i class="fas fa-list-ul"></i>
+                    </div>
+                    <div class="option-details">
+                        <h3>Table de correspondance</h3>
+                        <p>Exporte uniquement la liste des valeurs uniques mappées (Source -> Cible).</p>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+
+                <div class="export-option" id="btnEnrichedExport">
+                    <div class="option-icon">
+                        <i class="fas fa-table"></i>
+                    </div>
+                    <div class="option-details">
+                        <h3>Données enrichies (Fusion)</h3>
+                        <p>Exporte toutes les lignes de votre fichier source en ajoutant les colonnes correspondantes du
+                            fichier cible.</p>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Select2 for searchable selects -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Configuration -->
+    <script src="js/config.js"></script>
+
+    <!-- Custom JS (doit être chargé avant dhis2-auth car il contient showToast) -->
+    <script src="js/app.js"></script>
+
+    <!-- DHIS2 Session Manager et Auth (utilisent showToast de app.js) -->
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+</body>
+
+</html>

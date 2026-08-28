@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approbation des Données - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        /* ── Module-specific styles ── */
+        .data-element-list-container {
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .list-search-bar {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            flex-wrap: wrap;
+        }
+
+        .list-scroll-area {
+            max-height: 380px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .selectable-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .selectable-item:last-child {
+            border-bottom: none;
+        }
+
+        .selectable-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .selectable-item.selected {
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .selectable-item input[type="checkbox"] {
+            margin-right: 15px;
+            transform: scale(1.2);
+            accent-color: #667eea;
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .item-id {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        /* Org unit tree */
+        .org-unit-tree {
+            max-height: 380px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .tree-ul {
+            list-style: none;
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .tree-ul.root-ul {
+            padding-left: 0;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .tree-node-content:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .tree-node-content.selected {
+            background: rgba(102, 126, 234, 0.25);
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tree-toggle {
+            width: 24px;
+            text-align: center;
+            margin-right: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tree-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .form-input.modern-search {
+            width: 100%;
+            height: 50px;
+            padding-left: 45px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            color: #fff;
+            transition: all 0.3s;
+        }
+
+        .form-input.modern-search:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            pointer-events: none;
+        }
+
+        .ou-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-top: 5px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .ou-search-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .ou-search-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .ou-search-item .ou-path {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ── Approval Status Table ── */
+        .status-table-wrap {
+            max-height: 480px;
+            overflow: auto;
+            background: #fff;
+            border: 1px solid #bcbcbc;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .approval-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            color: #333;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .approval-table th,
+        .approval-table td {
+            padding: 8px 12px;
+            border: 1px solid #bcbcbc;
+            white-space: nowrap;
+        }
+
+        .approval-table th {
+            background: #ebf1f6;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .approval-table td {
+            background: #fff;
+        }
+
+        .approval-table tr:hover td {
+            background: #f5f5f5;
+        }
+
+        .approval-table td:first-child,
+        .approval-table td:nth-child(2) {
+            background: #ebf1f6;
+            font-weight: 500;
+        }
+
+        .approval-table tr:hover td:first-child,
+        .approval-table tr:hover td:nth-child(2) {
+            background: #dfe9f2;
+        }
+
+        /* Status badge */
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-APPROVED_HERE {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .badge-ACCEPTED_HERE {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+        }
+
+        .badge-APPROVED_ABOVE {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .badge-UNAPPROVED {
+            background: rgba(107, 114, 128, 0.15);
+            color: #6b7280;
+        }
+
+        .badge-UNAPPROVABLE {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .badge-READY_FOR_APPROVAL {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .badge-WAITING_FOR_LOWER_LEVEL_ORG_UNITS {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        /* Checkbox column in results table */
+        .approval-table input[type="checkbox"] {
+            accent-color: #667eea;
+            transform: scale(1.15);
+        }
+
+        /* Logs */
+        .logs-container {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border: 1px solid #333;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #2a2a2a;
+            padding-bottom: 5px;
+        }
+
+        .log-time {
+            color: #666;
+        }
+
+        .log-info {
+            color: #667eea;
+        }
+
+        .log-success {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-warning {
+            color: #f59e0b;
+        }
+
+        /* Period presets */
+        .period-presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        /* Action bar */
+        .action-bar-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .action-bar-top .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-approve {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-approve:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-unapprove {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-unapprove:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-unaccept {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-unaccept:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* Progress */
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 100px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 100px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
+
+        /* Home button */
+        .btn-home-link {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff !important;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-home-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* Counters */
+        .selection-summary {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.25);
+            border-radius: 10px;
+            padding: 12px 18px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .selection-summary span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .selection-summary strong {
+            color: #667eea;
+        }
+
+        /* Mode toggle */
+        .mode-toggle-bar {
+            display: flex;
+            gap: 8px;
+            margin: 14px 0 10px;
+        }
+
+        .mode-btn {
+            padding: 8px 20px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.25s;
+        }
+
+        .mode-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+        }
+
+        .ds-badge-wf {
+            display: inline-block;
+            font-size: 10px;
+            background: rgba(102, 126, 234, 0.18);
+            color: #667eea;
+            border-radius: 4px;
+            padding: 1px 6px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display:none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-check-double" style="color:#667eea;"></i>
+                    <h1>Approbation des Données</h1>
+                </div>
+                <p class="subtitle">Approuvez, désapprouvez ou annulez l'acceptation de données par ensemble de données,
+                    unité d'organisation et période.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Workflow</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Unités d'Org.</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Périodes</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Statut &amp; Actions</div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════
+             STEP 1 — Dataset Selection
+        ══════════════════════════════════════════════ -->
+        <section class="step-content glass-card" id="step1">
+            <div class="section-header">
+                <i class="fas fa-project-diagram"></i>
+                <h2>Étape 1 : Sélectionner les Workflows d'Approbation</h2>
+            </div>
+            <div class="card-body">
+                <p class="info-text">Choisissez un ou plusieurs workflows d'approbation DHIS2. Chaque workflow
+                    correspond à un ou plusieurs ensembles de données et définit les niveaux d'approbation.</p>
+
+                <!-- Mode toggle -->
+                <div class="mode-toggle-bar">
+                    <button class="mode-btn active" id="modeWorkflow">
+                        <i class="fas fa-project-diagram"></i> Par Workflow
+                    </button>
+                    <button class="mode-btn" id="modeDataset">
+                        <i class="fas fa-database"></i> Par Dataset
+                    </button>
+                </div>
+                <p id="modeInfoText" class="info-text" style="font-size:0.82rem; margin-top:0; opacity:0.75;">
+                    Mode Workflow : sélectionnez le workflow d'approbation directement.
+                </p>
+
+                <div class="data-element-list-container">
+                    <div class="list-search-bar">
+                        <div class="search-wrapper" style="flex-grow:1; margin-bottom:0;">
+                            <input type="text" id="dsSearchInput" class="form-input modern-search"
+                                placeholder="Rechercher un workflow par nom ou ID...">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        <button class="btn" id="btnSelectAllDS">Tout Sélectionner</button>
+                        <button class="btn" id="btnDeselectAllDS">Tout Désélectionner</button>
+                    </div>
+                    <div class="list-scroll-area" id="dsListContainer">
+                        <div class="tree-loading"><i class="fas fa-spinner fa-spin"></i> Chargement des workflows...
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px; color:var(--text-muted); font-size:0.85rem;" id="dsSelectionCount">0
+                    workflow(s) sélectionné(s)</div>
+            </div>
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="nextToStep2">
+                    Suivant : Unités d'Organisation <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             STEP 2 — Org Unit Selection
+        ══════════════════════════════════════════════ -->
+        <section class="step-content glass-card" id="step2" style="display:none;">
+            <div class="section-header">
+                <i class="fas fa-sitemap"></i>
+                <h2>Étape 2 : Sélectionner les Unités d'Organisation</h2>
+            </div>
+            <div class="card-body">
+                <p class="info-text">Choisissez une unité d'organisation parente. La recherche de statut s'appliquera à
+                    cette unité et à <strong>toute sa descendance directe</strong>.</p>
+
+                <div class="search-wrapper">
+                    <input type="text" id="ouSearchInput" class="form-input modern-search"
+                        placeholder="Rechercher une unité d'organisation...">
+                    <i class="fas fa-search search-icon"></i>
+                    <div id="ouSearchResults" class="ou-search-results"></div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label>Unité sélectionnée</label>
+                    <input type="text" id="selectedOrgUnitName" class="form-input"
+                        placeholder="Sélectionnez dans l'arbre ou recherchez..." readonly
+                        style="background:rgba(255,255,255,0.03); color:#fff;">
+                </div>
+
+                <div id="orgUnitTreeContainer" class="org-unit-tree">
+                    <div class="tree-loading"><i class="fas fa-spinner fa-spin"></i> Chargement de la hiérarchie...
+                    </div>
+                </div>
+            </div>
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep1"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button class="btn btn-large btn-gradient" id="nextToStep3">
+                    Suivant : Périodes <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             STEP 3 — Period Selection
+        ══════════════════════════════════════════════ -->
+        <section class="step-content glass-card" id="step3" style="display:none;">
+            <div class="section-header">
+                <i class="fas fa-calendar-alt"></i>
+                <h2>Étape 3 : Sélectionner les Périodes</h2>
+            </div>
+            <div class="card-body">
+                <p class="info-text">Sélectionnez les périodes pour lesquelles vous souhaitez visualiser et agir sur
+                    l'approbation.</p>
+
+                <div class="period-presets">
+                    <button class="btn btn-sm" id="presetThisYear">Cette Année</button>
+                    <button class="btn btn-sm" id="presetLastYear">Année Précédente</button>
+                    <button class="btn btn-sm" id="presetLast12Months">12 Derniers Mois</button>
+                </div>
+
+                <div class="data-element-list-container">
+                    <div class="list-search-bar">
+                        <div class="search-wrapper" style="flex-grow:1; margin-bottom:0;">
+                            <input type="text" id="periodSearchInput" class="form-input modern-search"
+                                placeholder="Rechercher (ex: 202401, 2024)">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                        <button class="btn" id="btnDeselectAllPeriods">Tout Désélectionner</button>
+                    </div>
+                    <div class="list-scroll-area" id="periodListContainer" style="max-height:300px;"></div>
+                </div>
+
+                <div style="margin-top:12px; color:var(--text-muted); font-size:0.85rem;" id="periodSelectionCount">0
+                    période(s) sélectionnée(s)</div>
+            </div>
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep2"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button class="btn btn-large btn-gradient" id="nextToStep4">
+                    Charger le Statut <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             STEP 4 — Status & Actions
+        ══════════════════════════════════════════════ -->
+        <section class="step-content glass-card" id="step4" style="display:none;">
+            <div class="section-header">
+                <i class="fas fa-tasks"></i>
+                <h2>Étape 4 : Statut d'Approbation &amp; Actions</h2>
+            </div>
+            <div class="card-body">
+
+                <!-- Loading state -->
+                <div id="statusLoading" style="text-align:center; padding:40px;">
+                    <i class="fas fa-cog fa-spin" style="font-size:48px; color:#667eea; margin-bottom:20px;"></i>
+                    <h4>Chargement du statut d'approbation...</h4>
+                    <div class="progress-container" style="max-width:400px; margin:20px auto;">
+                        <div id="statusProgressBar" class="progress-bar" style="width:0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div id="statusResults" style="display:none;">
+
+                    <!-- Summary badges -->
+                    <div class="selection-summary" id="statusSummary"></div>
+
+                    <!-- Action bar -->
+                    <div class="action-bar-top">
+                        <div>
+                            <label
+                                style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary);">
+                                <input type="checkbox" id="selectAllRows"
+                                    style="transform:scale(1.2); accent-color:#667eea;">
+                                Tout sélectionner / désélectionner
+                            </label>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-approve" id="btnApproveSelected"
+                                title="Approuver les lignes sélectionnées">
+                                <i class="fas fa-check-circle"></i> Approuver
+                            </button>
+                            <button class="btn btn-sm btn-unapprove" id="btnUnapproveSelected"
+                                title="Désapprouver les lignes sélectionnées">
+                                <i class="fas fa-times-circle"></i> Désapprouver
+                            </button>
+                            <button class="btn btn-sm btn-unaccept" id="btnUnacceptSelected"
+                                title="Annuler l'acceptation des lignes sélectionnées">
+                                <i class="fas fa-undo"></i> Annuler Acceptation
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar for bulk ops -->
+                    <div id="bulkProgressWrap" style="display:none; margin-bottom:15px;">
+                        <div class="progress-container">
+                            <div id="bulkProgressBar" class="progress-bar" style="width:0%;"></div>
+                        </div>
+                        <div id="bulkProgressText"
+                            style="text-align:center; margin-top:8px; font-size:0.85rem; color:var(--text-muted);">
+                        </div>
+                    </div>
+
+                    <!-- Status table -->
+                    <div class="status-table-wrap">
+                        <table class="approval-table" id="approvalTable">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Unité d'Organisation</th>
+                                    <th>Workflow</th>
+                                    <th>Période</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvalTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Logs -->
+                    <div class="logs-container" id="executionLogs" style="display:none;"></div>
+                </div>
+
+            </div>
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep3"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button class="btn btn-large btn-gradient" id="btnRefreshStatus">
+                    <i class="fas fa-sync-alt"></i> Rafraîchir
+                </button>
+                <button class="btn btn-large btn-secondary" onclick="location.reload()">
+                    <i class="fas fa-redo"></i> Nouveau traitement
+                </button>
+            </div>
+        </section>
+
+    </div><!-- /container -->
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback" style="display:none;">
+                    <div class="feedback-icon"><i class="fas fa-info-circle"></i></div>
+                    <div class="feedback-content">
+                        <div class="feedback-title" id="authFeedbackTitle">Information</div>
+                        <div class="feedback-message" id="authFeedbackMessage"></div>
+                    </div>
+                    <button type="button" class="feedback-close" onclick="hideAuthFeedback()"><i
+                            class="fas fa-times"></i></button>
+                </div>
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/data-approvals.js"></script>
+</body>
+
+</html>

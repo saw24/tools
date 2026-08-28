@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Table BD - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+    <link rel="stylesheet" href="css/data-analysis.css">
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <!-- Reuse existing generic auth components if needed -->
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-database"></i>
+                    <h1>Import Table BD</h1>
+                </div>
+                <p class="subtitle">Importez le contenu d'une table, sélectionnez les colonnes et exportez.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Connexion</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Table & Colonnes</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Filtres</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Résultats</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Connection -->
+        <section class="step-content glass-card" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-database"></i>
+                <h2>Étape 1 : Connexion à la base de données</h2>
+            </div>
+
+            <div class="card-body">
+                <form id="connectionForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Type de base de données</label>
+                            <select id="dbType" class="form-control">
+                                <option value="postgresql">PostgreSQL</option>
+                                <option value="mysql">MySQL</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Hôte (Host)</label>
+                            <input type="text" id="dbHost" class="form-control" placeholder="localhost"
+                                value="localhost">
+                        </div>
+                        <div class="form-group">
+                            <label>Port</label>
+                            <input type="number" id="dbPort" class="form-control" placeholder="5432" value="5432">
+                        </div>
+                        <div class="form-group">
+                            <label>Nom de la base (DB Name)</label>
+                            <input type="text" id="dbName" class="form-control" placeholder="macour_bd">
+                        </div>
+                        <div class="form-group">
+                            <label>Utilisateur</label>
+                            <input type="text" id="dbUser" class="form-control" placeholder="postgres">
+                        </div>
+                        <div class="form-group">
+                            <label>Mot de passe</label>
+                            <input type="password" id="dbPassword" class="form-control" placeholder="••••••••">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="btnConnect">
+                    <i class="fas fa-plug"></i> Se connecter
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Table Selection -->
+        <section class="step-content glass-card" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-table"></i>
+                <h2>Étape 2 : Sélection de la table et des colonnes</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Choisir une table</label>
+                    <select id="tableSelect" class="form-control">
+                        <option value="">Chargement des tables...</option>
+                    </select>
+                </div>
+
+                <div id="columnSelectionContainer" style="display: none; margin-top: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 500;">Sélectionner les
+                        colonnes</label>
+                    <div class="actions-panel" style="justify-content: flex-start; margin-bottom: 10px;">
+                        <button class="btn btn-sm btn-icon" id="selectAllCols">Tout cocher</button>
+                        <button class="btn btn-sm btn-icon" id="deselectAllCols">Tout décocher</button>
+                    </div>
+                    <div id="columnsCheckboxList" class="columns-grid">
+                        <!-- Checkboxes will be injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep1">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="nextToStep3">
+                    Suivant <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Filters -->
+        <section class="step-content glass-card" id="step3" data-step="3" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-filter"></i>
+                <h2>Étape 3 : Filtres de données (Optionnel)</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Clause WHERE (ex: age > 18 AND status = 'active')</label>
+                        <input type="text" id="filterWhere" class="form-control" placeholder="Condition SQL...">
+                    </div>
+                    <div class="form-group">
+                        <label>Trier par (ORDER BY)</label>
+                        <select id="filterOrderBy" class="form-control">
+                            <option value="">Aucun tri</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ordre</label>
+                        <select id="filterOrderDir" class="form-control">
+                            <option value="ASC">Croissant (ASC)</option>
+                            <option value="DESC">Décroissant (DESC)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Limite (LIMIT)</label>
+                        <input type="number" id="filterLimit" class="form-control" value="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep2">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="nextToStep4">
+                    Charger les données <i class="fas fa-play"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 4: Results -->
+        <section class="step-content glass-card" id="step4" data-step="4" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-list-alt"></i>
+                <h2>Étape 4 : Résultats</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="actions-panel">
+                    <button class="btn btn-success" id="btnExportExcel">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button class="btn btn-primary" id="btnExportJson">
+                        <i class="fas fa-file-code"></i> Export JSON
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="resultsTable" class="modern-table">
+                        <thead>
+                            <tr id="tableHeader"></tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Data will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep3">
+                    <i class="fas fa-arrow-left"></i> Modifier Filtres
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="js/data-analysis.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        if (typeof showToast === 'undefined') {
+            window.showToast = function (type, title, message) {
+                const toast = $(`<div class="toast toast-${type}"><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div></div>`);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(300, () => toast.remove()), 4000);
+            };
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filtre Avancé de Structures - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .module-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .module-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .module-header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .filter-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-lg);
+            animation: fadeInUp 0.8s ease-out;
+            position: relative;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-group label i {
+            color: #667eea;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        .btn-action {
+            padding: 14px 32px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+            justify-content: center;
+        }
+
+        .btn-action:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .results-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            display: none;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-lg);
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .results-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: rgba(15, 15, 35, 0.95);
+            padding: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            display: inline-block;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .badge.ancestor {
+            background: rgba(102, 126, 234, 0.15);
+            color: #818cf8;
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 15, 35, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            border-radius: 16px;
+            backdrop-filter: blur(4px);
+            display: none;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        
+        .empty-state i {
+            font-size: 56px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats-badge {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="module-container">
+        <header class="module-header">
+            <h1><i class="fas fa-filter"></i> Filtre Avancé de Structures</h1>
+            <p class="subtitle">Recherchez vos unités d'organisation par niveau, par nom, et excluez celles d'un groupe spécifique.</p>
+        </header>
+
+        <div class="filter-card">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <div style="color: white; font-size: 16px; font-weight: 500;" id="loadingText">Recherche en cours...</div>
+            </div>
+
+            <h3 style="font-size: 20px; margin-bottom: 24px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-sliders-h"></i> Critères de recherche
+            </h3>
+
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="filterLevel"><i class="fas fa-layer-group"></i> Niveau de la structure</label>
+                    <select id="filterLevel" class="filter-input">
+                        <option value="">Tous les niveaux</option>
+                    </select>
+                    <div class="help-text">Filtrer par niveau administratif.</div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterNameExp"><i class="fas fa-font"></i> Le nom contient</label>
+                    <input type="text" id="filterNameExp" class="filter-input" placeholder="Ex: Hopital, Centre...">
+                    <div class="help-text">Expression à rechercher dans le nom.</div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterExcludedGroup" style="color: #fb7185;"><i class="fas fa-ban" style="color: #fb7185;"></i> EXCLURE le groupe</label>
+                    <select id="filterExcludedGroup" class="filter-input" style="border-color: rgba(251, 113, 133, 0.3);">
+                        <option value="">Aucun groupe exclu</option>
+                    </select>
+                    <div class="help-text">Les structures de ce groupe n'apparaîtront pas.</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 24px;">
+                <button class="btn-action" id="btnSearch" onclick="searchStructures()">
+                    <i class="fas fa-search"></i> Lancer la recherche
+                </button>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="results-header">
+                <h3 class="results-title"><i class="fas fa-list"></i> Résultats de la recherche</h3>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <div class="stats-badge" id="resultsCount">
+                        <i class="fas fa-check-circle"></i> 0 résultats
+                    </div>
+                    <button class="btn-action" style="padding: 10px 20px; font-size: 14px; background: rgba(255,255,255,0.1); box-shadow: none;" onclick="exportResults()">
+                        <i class="fas fa-file-csv"></i> Exporter CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">ID</th>
+                            <th style="width: 25%;">Nom & Niveau</th>
+                            <th style="width: 25%;">Chemin (Ancêtres)</th>
+                            <th style="width: 35%;">Groupes actuels</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <!-- Data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DHIS2 Session info -->
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        let currentResults = [];
+        let levelMap = {};
+
+        // App initialization
+        $(document).ready(async function() {
+            if (!dhis2Session.isConnected()) {
+                showToast('error', 'Session requise', 'Veuillez vous connecter à DHIS2.');
+                setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+                return;
+            }
+
+            try {
+                // Determine API version dynamically if possible, or fallback
+                // but standard API calls usually work across versions
+                await Promise.all([
+                    loadLevels(),
+                    loadGroups()
+                ]);
+            } catch (err) {
+                console.error("Erreur globale d'initialisation", err);
+            }
+        });
+
+        // Toast implementation matching the app
+        window.showToast = function (type, title, message) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type]}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 5000);
+        };
+
+        async function loadLevels() {
+            try {
+                const response = await dhis2Session.get('/api/organisationUnitLevels.json?fields=id,level,displayName&paging=false');
+                if (response && response.organisationUnitLevels) {
+                    const select = $('#filterLevel');
+                    
+                    // Sort by level number
+                    response.organisationUnitLevels.sort((a, b) => a.level - b.level);
+                    
+                    response.organisationUnitLevels.forEach(lvl => {
+                        levelMap[lvl.level] = lvl.displayName;
+                        select.append(`<option value="${lvl.level}">Niveau ${lvl.level} - ${lvl.displayName}</option>`);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading levels:', error);
+                showToast('error', 'Erreur', 'Impossible de charger les niveaux administratifs.');
+            }
+        }
+
+        async function loadGroups() {
+            try {
+                const response = await dhis2Session.get('/api/organisationUnitGroups.json?fields=id,displayName&paging=false');
+                if (response && response.organisationUnitGroups) {
+                    const select = $('#filterExcludedGroup');
+                    
+                    // Sort alphabetically
+                    response.organisationUnitGroups.sort((a, b) => a.displayName.localeCompare(b.displayName));
+                    
+                    response.organisationUnitGroups.forEach(grp => {
+                        select.append(`<option value="${grp.id}">${grp.displayName}</option>`);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading groups:', error);
+                showToast('error', 'Erreur', 'Impossible de charger les groupes de structures.');
+            }
+        }
+
+        async function searchStructures() {
+            const level = $('#filterLevel').val();
+            const nameExp = $('#filterNameExp').val().trim();
+            const excludedGroupId = $('#filterExcludedGroup').val();
+
+            if (!level && !nameExp && !excludedGroupId) {
+                // If the user hasn't selected anything, warn them unless they want everything
+                if (!confirm("Vous n'avez défini aucun critère. Voulez-vous vraiment charger toutes les structures ? Cela pourrait prendre un certain temps.")) {
+                    return;
+                }
+            }
+            
+            $('#loadingOverlay').css('display', 'flex');
+            $('#btnSearch').prop('disabled', true);
+            $('#resultsSection').hide();
+
+            try {
+                // Build the query. We include parent path for better display
+                let query = '/api/organisationUnits.json?fields=id,displayName,level,path,parent[displayName],organisationUnitGroups[id,displayName]&paging=false';
+                
+                if (level) {
+                    query += `&filter=level:eq:${level}`;
+                }
+                
+                if (nameExp) {
+                    // Using ilike for case-insensitive contains
+                    query += `&filter=displayName:ilike:${encodeURIComponent(nameExp)}`;
+                }
+
+                $('#loadingText').text('Récupération des données depuis DHIS2...');
+                const response = await dhis2Session.get(query);
+                
+                let orgUnits = response.organisationUnits || [];
+                
+                // Now apply exclusion filter locally if needed
+                if (excludedGroupId && orgUnits.length > 0) {
+                    $('#loadingText').text('Filtrage des groupes exclus...');
+                    
+                    orgUnits = orgUnits.filter(ou => {
+                        if (!ou.organisationUnitGroups || ou.organisationUnitGroups.length === 0) {
+                            return true; // Keep if it has no groups
+                        }
+                        
+                        // Check if the excluded group is in the ou's groups
+                        const hasExcludedGroup = ou.organisationUnitGroups.some(g => g.id === excludedGroupId);
+                        
+                        // Keep if it does NOT have the excluded group
+                        return !hasExcludedGroup;
+                    });
+                }
+
+                currentResults = orgUnits;
+                
+                // We will fetch ancestors if needed to display path properly, but for speed, 
+                // we'll just show the direct parent initially, or the path string if known by API format.
+                // The 'path' property is like "/ancestor1/ancestor2/id"
+                // It's a bit heavy to resolve all names of the path client-side for 1000s of structures.
+                // For now, we'll just display the parent name.
+                
+                renderResults();
+                
+                showToast('success', 'Recherche terminée', `${orgUnits.length} structures trouvées.`);
+                $('#resultsSection').show();
+
+                // Sort results
+                $('html, body').animate({
+                    scrollTop: $("#resultsSection").offset().top - 20
+                }, 500);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                showToast('error', 'Erreur de recherche', 'Une erreur est survenue lors de la communication avec DHIS2.');
+            } finally {
+                $('#loadingOverlay').hide();
+                $('#btnSearch').prop('disabled', false);
+            }
+        }
+
+        function renderResults() {
+            const tbody = $('#resultsBody');
+            tbody.empty();
+            
+            $('#resultsCount').html(`<i class="fas fa-check-circle"></i> ${currentResults.length} résultats`);
+
+            if (currentResults.length === 0) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <i class="fas fa-search-minus"></i>
+                                <h3>Aucun résultat</h3>
+                                <p style="margin-top: 10px;">Aucune structure ne correspond à vos critères de recherche et d'exclusion.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            // Slice to 500 max to avoid DOM freeze! Warn user if more than 500
+            const maxDisplay = 500;
+            const displayResults = currentResults.slice(0, maxDisplay);
+
+            if (currentResults.length > maxDisplay) {
+                showToast('info', 'Affichage limité', `Seuls les ${maxDisplay} premiers résultats sont affichés. L'export CSV contiendra la totalité (${currentResults.length}).`);
+            }
+
+            displayResults.forEach(ou => {
+                let groupsHtml = '<span style="color:var(--text-muted); font-style:italic;">Aucun groupe</span>';
+                
+                if (ou.organisationUnitGroups && ou.organisationUnitGroups.length > 0) {
+                    groupsHtml = ou.organisationUnitGroups
+                        .map(g => `<span class="badge">${g.displayName}</span>`)
+                        .join('');
+                }
+
+                const lvlName = levelMap[ou.level] ? `(${levelMap[ou.level]})` : '';
+                const parentName = ou.parent ? ou.parent.displayName : 'Racine';
+
+                tbody.append(`
+                    <tr>
+                        <td style="font-family: 'Monaco', 'Consolas', monospace; font-size: 13px; color: #818cf8;">${ou.id}</td>
+                        <td>
+                            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${ou.displayName}</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);"><i class="fas fa-layer-group" style="font-size: 10px; margin-right: 4px;"></i> Niveau ${ou.level || '-'} ${lvlName}</div>
+                        </td>
+                        <td>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                <i class="fas fa-level-up-alt fa-rotate-90" style="margin-right: 6px;"></i>${parentName}
+                            </div>
+                        </td>
+                        <td>${groupsHtml}</td>
+                    </tr>
+                `);
+            });
+        }
+        
+        function formatCsvCell(text) {
+            if (text == null) return '""';
+            const str = String(text).replace(/"/g, '""');
+            if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+                return `"${str}"`;
+            }
+            return text;
+        }
+
+        function exportResults() {
+            if (currentResults.length === 0) {
+                showToast('warning', 'Export impossible', 'Aucune donnée à exporter.');
+                return;
+            }
+            
+            try {
+                // Determine BOM for Excel UTF-8
+                const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                let csvContent = "ID,Nom,Niveau,Parent,Groupes\n";
+                
+                currentResults.forEach(ou => {
+                    const id = ou.id;
+                    const name = formatCsvCell(ou.displayName);
+                    const level = ou.level || '';
+                    const parent = ou.parent ? formatCsvCell(ou.parent.displayName) : '';
+                    
+                    let groups = '';
+                    if (ou.organisationUnitGroups && ou.organisationUnitGroups.length > 0) {
+                        const groupNames = ou.organisationUnitGroups.map(g => g.displayName).join('; ');
+                        groups = formatCsvCell(groupNames);
+                    }
+                    
+                    csvContent += `${id},${name},${level},${parent},${groups}\n`;
+                });
+                
+                const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `filtre_structures_${new Date().toISOString().slice(0,10)}.csv`);
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showToast('success', 'Export réussi', 'Le fichier CSV a été généré avec succès.');
+            } catch (error) {
+                console.error("Erreur lors de l'exportation CSV:", error);
+                showToast('error', 'Erreur d\'export', 'Une erreur est survenue lors de la génération du fichier.');
+            }
+        }
+    </script>
+</body>
+</html>
