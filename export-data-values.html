@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export de Valeurs de Données - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .data-element-list-container {
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .list-search-bar {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            flex-wrap: wrap;
+        }
+
+        .list-scroll-area {
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .data-element-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+
+        .data-element-item:last-child { border-bottom: none; }
+        .data-element-item:hover { background: rgba(255, 255, 255, 0.05); }
+        .data-element-item.selected { background: rgba(102, 126, 234, 0.15); }
+
+        .data-element-item input[type="checkbox"] {
+            margin-right: 15px;
+            transform: scale(1.2);
+            accent-color: #667eea;
+        }
+
+        .de-info { display: flex; flex-direction: column; }
+        .de-name { font-weight: 500; color: var(--text-primary); }
+        .de-id { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+        /* Tree */
+        .org-unit-tree {
+            max-height: 340px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .tree-ul { list-style: none; padding-left: 20px; margin: 0; }
+        .tree-ul.root-ul { padding-left: 0; }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .tree-node-content:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-primary); }
+        .tree-node-content.selected { background: rgba(102, 126, 234, 0.25); color: #667eea; font-weight: 600; }
+
+        .tree-toggle { width: 24px; text-align: center; margin-right: 5px; cursor: pointer; font-size: 14px; }
+        .tree-toggle:hover { color: white; }
+
+        .ou-tree-checkbox { margin-right: 10px; transform: scale(1.15); accent-color: #667eea; }
+
+        .tree-loading { padding: 20px; text-align: center; color: var(--text-muted); }
+        .text-error { color: #ef4444; }
+
+        /* Mode tabs (Step 1 & Step 3) */
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .mode-tab {
+            padding: 10px 18px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mode-tab:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-primary); }
+
+        .mode-tab.active {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+        }
+
+        .mode-panel-hint {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        /* Basket / chips */
+        .basket-panel {
+            margin-top: 20px;
+            border: 1px dashed rgba(102, 126, 234, 0.35);
+            border-radius: 12px;
+            padding: 16px;
+            background: rgba(102, 126, 234, 0.04);
+        }
+
+        .basket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .basket-header h4 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .basket-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #a5b4fc;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            max-width: 320px;
+        }
+
+        .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chip-remove, .chip-remove-ou { cursor: pointer; opacity: 0.7; }
+        .chip-remove:hover, .chip-remove-ou:hover { opacity: 1; color: #ef4444; }
+
+        /* Search box (org units) */
+        .search-wrapper { position: relative; margin-bottom: 20px; }
+
+        .form-input.modern-search {
+            width: 100%;
+            height: 46px;
+            padding-left: 45px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .form-input.modern-search:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+            box-shadow: 0 0 15px rgba(102, 126, 234, 0.2);
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        .ou-search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-top: 5px;
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .ou-search-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+
+        .ou-search-item:hover { background: rgba(102, 126, 234, 0.1); }
+        .ou-search-item.added { opacity: 0.6; }
+        .ou-search-item .ou-path { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .toggle-row input { transform: scale(1.2); accent-color: #667eea; }
+
+        /* Periods */
+        .period-config-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .period-config-row .form-group { flex: 1; min-width: 160px; margin-bottom: 0; }
+
+        .period-config-row label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .period-config-row select,
+        .period-config-row input[type="date"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        #yearPickerRow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px 0 15px;
+        }
+
+        #dailyRangeRow {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .year-check-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .year-check-label input { accent-color: #667eea; }
+
+        .relative-group { margin-bottom: 18px; }
+
+        .relative-group h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #667eea;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .relative-items { display: flex; flex-wrap: wrap; gap: 10px; }
+
+        .relative-check-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 12.5px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .relative-check-label:hover { background: rgba(102, 126, 234, 0.1); color: var(--text-primary); }
+        .relative-check-label input { accent-color: #667eea; }
+
+        .period-summary-box {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 10px;
+            color: #34d399;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Preview summary */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #667eea; display: block; }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+
+        .export-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .export-format-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn-format {
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-format:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25); }
+        .btn-format.json { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+        .btn-format.csv { color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
+        .btn-format.xlsx { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+
+        .header-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .preview-table-container {
+            margin-top: 10px;
+            overflow: auto;
+            background: #1e1e2d;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-height: 480px;
+        }
+
+        .preview-table { width: 100%; border-collapse: collapse; font-size: 13px; color: #e1e1e1; }
+
+        .preview-table th, .preview-table td {
+            padding: 10px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .preview-table th {
+            background-color: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        .preview-table tr.selected td { background-color: rgba(102, 126, 234, 0.06); }
+        .row-checkbox { margin-right: 8px; accent-color: #667eea; }
+
+        .preview-cap-notice {
+            padding: 12px 16px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .period-type-warning-info {
+            background: rgba(59, 130, 246, 0.1) !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+            color: #93c5fd !important;
+        }
+
+        .period-type-warning-error {
+            background: rgba(245, 158, 11, 0.1) !important;
+            border-color: rgba(245, 158, 11, 0.3) !important;
+            color: #fbbf24 !important;
+        }
+
+        .info-box {
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: rgba(102, 126, 234, 0.06);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .btn-sm { padding: 8px 14px; font-size: 12px; }
+
+        .btn-home-link {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff !important;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-home-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home"><i class="fas fa-home"></i> Accueil</a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-file-export" style="color: #10b981;"></i>
+                    <h1>Export de Valeurs de Données</h1>
+                </div>
+                <p class="subtitle">Exportez des valeurs de données DHIS2 aux formats XLSX, CSV ou JSON, prêts pour un
+                    ré-import dans DHIS2.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Eléments</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Unités d'Org.</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Périodes</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Aperçu & Export</div>
+            </div>
+        </div>
+
+        <!-- STEP 1 : Data Elements -->
+        <section class="step-content glass-card" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-list-check"></i>
+                <h2>Étape 1 : Sélectionner les Éléments de Données</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="mode-tabs">
+                    <div class="de-mode-tab mode-tab active" data-mode="direct"><i class="fas fa-search"></i> Recherche directe (UID / Nom)</div>
+                    <div class="de-mode-tab mode-tab" data-mode="dataset"><i class="fas fa-layer-group"></i> Par Ensemble de données</div>
+                    <div class="de-mode-tab mode-tab" data-mode="degroup"><i class="fas fa-object-group"></i> Par Groupe d'éléments</div>
+                </div>
+
+                <!-- Mode: Direct -->
+                <div class="de-mode-panel" id="deModePanel_direct">
+                    <p class="mode-panel-hint">Cochez directement un ou plusieurs éléments de données (recherche par nom, UID ou code).</p>
+                    <div class="data-element-list-container">
+                        <div class="list-search-bar">
+                            <div class="search-wrapper" style="flex-grow: 1; margin-bottom: 0;">
+                                <input type="text" id="deSearchInput" class="form-input modern-search" placeholder="Rechercher par nom, UID ou code...">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                        </div>
+                        <div class="list-scroll-area" id="deListContainer">
+                            <div class="tree-loading"><i class="fas fa-spinner fa-spin"></i> Chargement des éléments de données...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode: Dataset -->
+                <div class="de-mode-panel" id="deModePanel_dataset" style="display:none;">
+                    <p class="mode-panel-hint">Cochez un ou plusieurs ensembles de données puis ajoutez tous leurs éléments au panier de sélection.</p>
+                    <div class="data-element-list-container">
+                        <div class="list-search-bar">
+                            <div class="search-wrapper" style="flex-grow: 1; margin-bottom: 0;">
+                                <input type="text" id="datasetSearchInput" class="form-input modern-search" placeholder="Rechercher un ensemble de données...">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                            <button class="btn btn-gradient" id="btnAddFromDatasets"><i class="fas fa-plus"></i> Ajouter au panier</button>
+                        </div>
+                        <div class="list-scroll-area" id="datasetListContainer">
+                            <div class="tree-loading"><i class="fas fa-spinner fa-spin"></i> Chargement des ensembles de données...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode: Group -->
+                <div class="de-mode-panel" id="deModePanel_degroup" style="display:none;">
+                    <p class="mode-panel-hint">Cochez un ou plusieurs groupes d'éléments de données puis ajoutez tous leurs membres au panier de sélection.</p>
+                    <div class="data-element-list-container">
+                        <div class="list-search-bar">
+                            <div class="search-wrapper" style="flex-grow: 1; margin-bottom: 0;">
+                                <input type="text" id="degroupSearchInput" class="form-input modern-search" placeholder="Rechercher un groupe d'éléments de données...">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                            <button class="btn btn-gradient" id="btnAddFromGroups"><i class="fas fa-plus"></i> Ajouter au panier</button>
+                        </div>
+                        <div class="list-scroll-area" id="degroupListContainer">
+                            <div class="tree-loading"><i class="fas fa-spinner fa-spin"></i> Chargement des groupes...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panier partagé -->
+                <div class="basket-panel">
+                    <div class="basket-header">
+                        <h4><i class="fas fa-shopping-basket"></i> Sélection actuelle</h4>
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <span id="deSelectionCount" style="font-size:13px; color:#10b981; font-weight:600;">0 élément sélectionné</span>
+                            <button class="btn btn-sm" id="btnClearDESelection">Vider</button>
+                        </div>
+                    </div>
+                    <div class="basket-list" id="deBasket"></div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="nextToStep2">
+                    Suivant : Unités d'organisation <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- STEP 2 : Org Units -->
+        <section class="step-content glass-card" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-sitemap"></i>
+                <h2>Étape 2 : Sélectionner les Unités d'Organisation</h2>
+            </div>
+
+            <div class="card-body">
+                <p class="info-text">Sélectionnez une ou plusieurs unités d'organisation, via l'arbre hiérarchique ou la recherche.</p>
+
+                <div class="search-wrapper">
+                    <input type="text" id="ouSearchInput" class="form-input modern-search" placeholder="Rechercher une unité d'organisation... (min. 2 caractères)">
+                    <i class="fas fa-search search-icon"></i>
+                    <div id="ouSearchResults" class="ou-search-results"></div>
+                </div>
+
+                <div id="orgUnitTreeContainer" class="org-unit-tree">
+                    <div class="tree-loading"><i class="fas fa-spinner fa-spin"></i> Chargement de la hiérarchie...</div>
+                </div>
+
+                <label class="toggle-row">
+                    <input type="checkbox" id="includeChildrenCheck">
+                    Inclure les sous-unités (descendants) des unités sélectionnées
+                </label>
+
+                <div class="basket-panel">
+                    <div class="basket-header">
+                        <h4><i class="fas fa-shopping-basket"></i> Unités sélectionnées</h4>
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <span id="ouSelectionCount" style="font-size:13px; color:#10b981; font-weight:600;">0 unité sélectionnée</span>
+                            <button class="btn btn-sm" id="btnClearOUSelection">Vider</button>
+                        </div>
+                    </div>
+                    <div class="basket-list" id="ouBasket"></div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep1"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button class="btn btn-large btn-gradient" id="nextToStep3">
+                    Suivant : Périodes <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- STEP 3 : Periods -->
+        <section class="step-content glass-card" id="step3" data-step="3" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-calendar-alt"></i>
+                <h2>Étape 3 : Sélectionner les Périodes</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="mode-tabs">
+                    <div class="period-mode-tab mode-tab active" data-mode="fixed"><i class="fas fa-calendar-day"></i> Périodes fixes</div>
+                    <div class="period-mode-tab mode-tab" data-mode="relative"><i class="fas fa-history"></i> Périodes relatives</div>
+                </div>
+
+                <!-- Fixed periods -->
+                <div class="period-mode-panel" id="periodModePanel_fixed">
+                    <div class="period-config-row">
+                        <div class="form-group">
+                            <label>Type de période</label>
+                            <select id="periodTypeSelect">
+                                <option value="Daily">Quotidien</option>
+                                <option value="Weekly">Hebdomadaire</option>
+                                <option value="Monthly" selected>Mensuel</option>
+                                <option value="BiMonthly">Bimestriel</option>
+                                <option value="Quarterly">Trimestriel</option>
+                                <option value="SixMonthly">Semestriel</option>
+                                <option value="Yearly">Annuel</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="dailyRangeRow" style="display:none;">
+                            <div style="flex:1;">
+                                <label>Du</label>
+                                <input type="date" id="dailyFrom">
+                            </div>
+                            <div style="flex:1;">
+                                <label>Au</label>
+                                <input type="date" id="dailyTo">
+                            </div>
+                            <button class="btn" id="btnGenerateDaily" style="height:38px; align-self:flex-end;">Générer</button>
+                        </div>
+                    </div>
+
+                    <div class="preview-cap-notice" id="periodTypeWarning"></div>
+
+                    <div id="yearPickerRow"></div>
+
+                    <div class="data-element-list-container">
+                        <div class="list-search-bar">
+                            <div class="search-wrapper" style="flex-grow: 1; margin-bottom: 0;">
+                                <input type="text" id="periodSearchInput" class="form-input modern-search" placeholder="Filtrer les périodes...">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                            <button class="btn" id="btnDeselectAllFixedPeriods">Tout désélectionner</button>
+                        </div>
+                        <div class="list-scroll-area" id="periodListContainer" style="max-height: 280px;"></div>
+                    </div>
+                </div>
+
+                <!-- Relative periods -->
+                <div class="period-mode-panel" id="periodModePanel_relative" style="display:none;">
+                    <p class="mode-panel-hint">Sélectionnez une ou plusieurs périodes relatives (comme dans DHIS2). Elles sont résolues automatiquement en périodes concrètes à partir de la date du jour.</p>
+                    <div id="relativePeriodContainer"></div>
+                </div>
+
+                <div class="period-summary-box" id="periodSummary">0 période(s) au total</div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep2"><i class="fas fa-arrow-left"></i> Retour</button>
+                <button class="btn btn-large btn-gradient" id="nextToStep4">
+                    Suivant : Aperçu & Export <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- STEP 4 : Preview and Export -->
+        <section class="step-content glass-card" id="step4" data-step="4" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-eye"></i>
+                <h2>Étape 4 : Aperçu et Export</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="summary-stats">
+                    <div class="stat-item"><span class="stat-value" id="summaryDECount">0</span><span class="stat-label">Eléments de données</span></div>
+                    <div class="stat-item"><span class="stat-value" id="summaryOUCount">0</span><span class="stat-label">Unités d'organisation</span></div>
+                    <div class="stat-item"><span class="stat-value" id="summaryPeCount">0</span><span class="stat-label">Périodes</span></div>
+                    <div class="stat-item"><span class="stat-value" id="totalValuesFound">0</span><span class="stat-label">Valeurs trouvées</span></div>
+                </div>
+
+                <div id="previewLoading" style="text-align: center; padding: 40px;">
+                    <i class="fas fa-cog fa-spin" style="font-size: 44px; color: #667eea; margin-bottom: 20px;"></i>
+                    <h4>Récupération des données en cours...</h4>
+                    <p class="text-muted">Interrogation de DHIS2 pour les critères sélectionnés.</p>
+                    <div class="progress-container" style="max-width: 400px; margin: 20px auto;">
+                        <div id="previewProgressBar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div id="previewContainer" style="display: none;">
+                    <div class="info-box">
+                        <i class="fas fa-check-circle" style="color:#10b981;"></i>
+                        Les fichiers exportés respectent le format <strong>dataValueSet</strong> accepté par DHIS2 en
+                        import : <code>dataElement, period, orgUnit, categoryOptionCombo, attributeOptionCombo, value,
+                        storedBy, lastUpdated, comment, followup</code>.
+                    </div>
+
+                    <div class="preview-cap-notice" id="previewCapNotice"></div>
+
+                    <div class="export-actions">
+                        <div class="search-wrapper" style="margin-bottom: 0; width: 280px;">
+                            <input type="text" id="previewSearchInput" class="form-input modern-search" placeholder="Filtrer l'aperçu..." style="height: 40px; font-size: 0.85rem;">
+                            <i class="fas fa-filter search-icon" style="font-size: 0.9rem;"></i>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                            <label class="header-toggle">
+                                <input type="checkbox" id="exportHeaderCheck"> Ajouter une ligne d'en-tête (CSV/XLSX, à retirer avant import DHIS2)
+                            </label>
+                            <div class="export-format-buttons">
+                                <button class="btn-format json" id="btnExportJSON"><i class="fas fa-file-code"></i> Export JSON</button>
+                                <button class="btn-format csv" id="btnExportCSV"><i class="fas fa-file-csv"></i> Export CSV</button>
+                                <button class="btn-format xlsx" id="btnExportXLSX"><i class="fas fa-file-excel"></i> Export XLSX</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preview-table-container">
+                        <table class="preview-table" id="dataPreviewTable"></table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" id="backToStep3"><i class="fas fa-arrow-left"></i> Retour</button>
+                <a href="index.html" class="btn btn-large btn-home-link"><i class="fas fa-home"></i> Terminer</a>
+            </div>
+        </section>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback" style="display: none;">
+                    <div class="feedback-icon"><i class="fas fa-info-circle"></i></div>
+                    <div class="feedback-content">
+                        <div class="feedback-title" id="authFeedbackTitle">Information</div>
+                        <div class="feedback-message" id="authFeedbackMessage"></div>
+                    </div>
+                    <button type="button" class="feedback-close" onclick="hideAuthFeedback()"><i class="fas fa-times"></i></button>
+                </div>
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input" placeholder="https://play.dhis2.org/2.39" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth"><i class="fas fa-sign-in-alt"></i> Se connecter</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+    <script src="js/export-data-values.js"></script>
+
+    <script>
+        if (typeof showToast === 'undefined') {
+            window.showToast = function (type, title, message) {
+                const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+                const toast = $(`<div class="toast toast-${type}"><i class="fas ${icons[type]}"></i><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div></div>`);
+                $('#toastContainer').append(toast);
+                setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+            };
+        }
+    </script>
+</body>
+
+</html>
