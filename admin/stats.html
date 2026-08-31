@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Administration Modules - DHIS2 Tools</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+
+    <style>
+        .admin-gate {
+            max-width: 420px;
+            margin: 120px auto;
+        }
+
+        .admin-gate h1 {
+            font-size: 22px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-gate p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .admin-gate input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .admin-header h1 {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .admin-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .admin-toolbar input[type="text"] {
+            width: 260px;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .admin-table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .admin-table th {
+            text-align: left;
+            padding: 14px 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .admin-table td {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .admin-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .admin-table tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .row-inactive {
+            opacity: 0.5;
+        }
+
+        .admin-badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .admin-badge-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+        }
+
+        .admin-badge-inactive {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        .admin-category-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(102, 126, 234, 0.15);
+            color: #a5b4fc;
+        }
+
+        .admin-table .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+        .btn-danger {
+            color: #fca5a5 !important;
+            border-color: rgba(239, 68, 68, 0.3) !important;
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.15) !important;
+        }
+
+        /* Form panel (add/edit) */
+        .form-panel-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-panel {
+            background: #16162a;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .form-panel h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .form-group input[type="text"]:disabled {
+            opacity: 0.5;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .icon-field-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-preview-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(102, 126, 234, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #667eea;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .checkbox-row input {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Gate: token entry -->
+    <div id="adminGate" class="container">
+        <div class="glass-card admin-gate">
+            <h1><i class="fas fa-shield-halved"></i> Administration</h1>
+            <p>Entrez le jeton administrateur (défini via <code>ADMIN_TOKEN</code> dans le fichier <code>.env</code>) pour gérer le catalogue des modules.</p>
+            <form id="adminGateForm">
+                <input type="password" id="adminTokenInput" placeholder="Jeton administrateur" autocomplete="off" required>
+                <button type="submit" class="btn btn-large btn-gradient" style="width:100%;">
+                    <i class="fas fa-unlock"></i> Accéder
+                </button>
+            </form>
+            <p style="margin-top:20px;"><a href="../index.html" style="color:#667eea;"><i class="fas fa-arrow-left"></i> Retour au tableau de bord</a></p>
+        </div>
+    </div>
+
+    <!-- Main admin app -->
+    <div id="adminApp" class="container" style="display:none;">
+        <div class="admin-header">
+            <h1><i class="fas fa-sliders"></i> Administration des Modules</h1>
+            <div>
+                <a href="../index.html" class="btn"><i class="fas fa-arrow-left"></i> Tableau de bord</a>
+                <button class="btn" id="btnLogout"><i class="fas fa-right-from-bracket"></i> Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="admin-toolbar">
+            <input type="text" id="adminSearchInput" placeholder="Rechercher un module...">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <span id="adminCount" style="font-size:13px; color:var(--text-muted);"></span>
+                <button class="btn btn-gradient" id="btnAddModule"><i class="fas fa-plus"></i> Ajouter un module</button>
+            </div>
+        </div>
+
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Module</th>
+                        <th>Catégorie</th>
+                        <th>Statut</th>
+                        <th style="text-align:right;">Visites</th>
+                        <th>Dernière visite</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="adminTableBody">
+                    <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Chargement...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add/Edit form panel -->
+    <div class="form-panel-overlay" id="moduleFormPanel">
+        <div class="form-panel">
+            <h2 id="formTitle"><i class="fas fa-cube"></i> Ajouter un module</h2>
+            <form id="moduleForm">
+                <div class="form-group">
+                    <label for="fieldPath">Chemin du fichier (.html)</label>
+                    <input type="text" id="fieldPath" placeholder="mon-module.html" required pattern="[A-Za-z0-9_-]+\.html">
+                    <small>Nom de fichier simple, sans "/" — c'est le lien utilisé sur le tableau de bord.</small>
+                </div>
+                <div class="form-group">
+                    <label for="fieldName">Nom affiché</label>
+                    <input type="text" id="fieldName" placeholder="Mon Module" required>
+                </div>
+                <div class="form-group">
+                    <label for="fieldCategory">Catégorie</label>
+                    <input type="text" id="fieldCategory" placeholder="Export, Import, Analyse..." list="categoryList">
+                    <datalist id="categoryList"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="fieldIcon">Icône (classe Font Awesome)</label>
+                    <div class="icon-field-row">
+                        <div class="icon-preview-box"><i class="fas fa-cube" id="iconPreview"></i></div>
+                        <input type="text" id="fieldIcon" placeholder="fa-cube" value="fa-cube" style="flex:1;">
+                    </div>
+                    <small>Ex : fa-download, fa-file-export, fa-users... (voir <a href="https://fontawesome.com/search?o=r&m=free&s=solid" target="_blank" style="color:#667eea;">fontawesome.com</a>)</small>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="fieldActive" checked>
+                    <label for="fieldActive" style="margin:0; text-transform:none; font-size:13px; color:var(--text-secondary);">Module actif (visible dans les statistiques)</label>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn" id="btnCancelForm">Annuler</button>
+                    <button type="submit" class="btn btn-gradient"><i class="fas fa-check"></i> Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../js/admin-stats.js"></script>
+</body>
+
+</html>

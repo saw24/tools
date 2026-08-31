@@ -143,6 +143,71 @@ Un module oublié de ce catalogue continue de fonctionner (`track_visit` le cré
 première visite), mais il vaut mieux l'y ajouter explicitement pour contrôler sa catégorie/icône
 et pour qu'il apparaisse dès l'installation, même sans avoir encore été visité.
 
+## 🛠️ Interface d'administration — `admin/stats.html`
+
+Pour gérer le catalogue de modules **sans éditer de code ni redéployer**, une interface dédiée
+permet d'ajouter, modifier, désactiver et supprimer des modules directement depuis le navigateur.
+
+### Activation (obligatoire)
+
+L'interface est **désactivée par défaut**, y compris si vous connaissez son URL : `api/admin-
+modules.php` refuse systématiquement tant qu'`ADMIN_TOKEN` n'est pas défini dans votre `.env`.
+
+```bash
+# Générer un jeton aléatoire
+openssl rand -hex 24
+```
+
+Ajoutez la ligne dans votre `.env` (voir `.env.example`) :
+
+```
+ADMIN_TOKEN=<le-jeton-généré>
+```
+
+Aucun redémarrage de service n'est nécessaire (le fichier `.env` est relu à chaque requête).
+
+### Utilisation
+
+1. Ouvrez `https://votre-serveur/admin/stats.html`.
+2. Collez le jeton (stocké ensuite en `sessionStorage` côté navigateur, jamais côté serveur —
+   même principe que la connexion DHIS2 de l'application).
+3. **Ajouter** : bouton « Ajouter un module » — chemin (`mon-module.html`), nom affiché,
+   catégorie (avec suggestions des catégories existantes), icône Font Awesome.
+4. **Modifier** : crayon sur une ligne — tous les champs sont éditables, y compris le chemin
+   (sans risque pour l'historique : les visites sont liées à l'identifiant interne du module, pas
+   à son chemin).
+5. **Désactiver / Réactiver** (icône œil) : bascule `is_active` — masque le module des
+   statistiques publiques et du badge d'usage **sans perdre son historique de visites**.
+   Réversible, à privilégier pour un module retiré temporairement.
+6. **Supprimer définitivement** (icône corbeille) : confirmation requise, supprime la ligne *et*
+   tout son historique de visites (cascade). Irréversible.
+
+### ⚠️ Sécurité
+
+- Le jeton est un simple secret partagé (pas de compte utilisateur, pas d'expiration) — traitez-
+  le comme un mot de passe admin. Ne le partagez pas, changez-le si vous soupçonnez une fuite
+  (il suffit de modifier `.env`, aucune donnée n'en dépend).
+- La page envoie le jeton via l'en-tête `Authorization: Bearer`, jamais en paramètre d'URL (donc
+  jamais dans les logs d'accès HTTP).
+- La balise `<meta name="robots" content="noindex, nofollow">` évite l'indexation, mais
+  n'importe qui connaissant l'URL peut voir l'écran de connexion (juste pas agir sans le jeton) —
+  ce n'est pas un remplacement d'une authentification applicative complète, seulement un garde-
+  fou raisonnable pour un outil interne.
+
+### `api/module_catalog.php` vs. l'interface d'administration : quand utiliser quoi ?
+
+Les deux méthodes cohabitent et ne s'excluent pas :
+
+| | `api/module_catalog.php` + `?action=init` | `admin/stats.html` |
+|---|---|---|
+| Usage | Changement **versionné dans le code**, reproductible sur tous les environnements (dev, test, prod) | Changement **immédiat**, propre à un environnement donné |
+| Quand l'utiliser | Vous ajoutez un vrai nouveau module (nouvelle page + carte sur le tableau de bord) | Vous corrigez une catégorie, retirez temporairement un module, ou testez un ajustement sur le serveur test sans toucher au dépôt |
+| Persistance | Survit à un `?action=init` sur n'importe quel environnement | Propre à la base de données de l'environnement modifié ; un `?action=init` ultérieur ne l'écrase pas (sauf nom/icône, resynchronisés) mais ne le reproduit pas non plus ailleurs |
+
+**Recommandation** : pour un nouveau module destiné à rester dans l'application, ajoutez-le aussi
+dans `api/module_catalog.php` (et committez), même si vous l'avez créé plus vite via l'interface
+d'administration — sinon un futur déploiement frais (ou `migrations/*.sql`) ne le recréera pas.
+
 Au 2026-08-31, tous les modules exposés sur `index.html` sont catalogués, ainsi que
 `import-metadata.html` qui existait dans le dépôt mais n'était jusque-là lié depuis aucune carte
 du tableau de bord (ni donc suivi dans les statistiques) — corrigé dans cette révision.
