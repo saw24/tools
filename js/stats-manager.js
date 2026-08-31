@@ -31,7 +31,7 @@ const StatsManager = {
     },
 
     /**
-     * Get all module statistics
+     * Get all module statistics (inclut les modules jamais visités)
      */
     getStats: async function () {
         try {
@@ -39,6 +39,20 @@ const StatsManager = {
             return await response.json();
         } catch (error) {
             console.error('Fetch Stats Error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Get daily visit counts for the activity chart
+     * @param {number} days - Number of trailing days to include (default 14)
+     */
+    getTimeseries: async function (days = 14) {
+        try {
+            const response = await fetch(`${this.apiUrl}?action=get_visits_timeseries&days=${days}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch Timeseries Error:', error);
             return { success: false, error: error.message };
         }
     },

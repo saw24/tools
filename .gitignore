@@ -39,3 +39,8 @@ composer.lock
 # Backup files
 *.bak
 *.backup
+
+# Configuration sensible (le vrai fichier doit de toute façon vivre HORS de ce
+# dossier — voir .env.example — mais on l'ignore aussi ici par sécurité)
+.env
+dhis2-tools.env

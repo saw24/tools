@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-require_once 'db_stats.php';
+require_once __DIR__ . '/db_stats.php';
 
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $input['action'] ?? $_GET['action'] ?? '';
@@ -8,7 +8,13 @@ $action = $input['action'] ?? $_GET['action'] ?? '';
 $pdo = getStatsDB();
 
 if (!$pdo) {
-    echo json_encode(['success' => false, 'message' => 'Erreur de connexion base de données']);
+    $diag = getStatsDBDiagnostic();
+    echo json_encode([
+        'success' => false,
+        'message' => 'Impossible de se connecter à la base de données. Fichier .env : '
+            . $diag['env_file_path'] . ' (' . ($diag['env_file_found'] ? 'trouvé' : 'INTROUVABLE') . ').',
+        'diagnostic' => $diag
+    ]);
     exit;
 }
 
