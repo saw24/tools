@@ -90,3 +90,21 @@ Et la connexion devrait réussir !
 ---
 
 **Note** : L'URL `https://play.im.dhis2.org` dans vos logs est la cause du problème. Utilisez `https://play.dhis2.org/2.40.0` à la place.
+
+---
+
+## 🔑 Types de connexion pris en charge
+
+Le modal de connexion DHIS2 propose deux modes (sélecteur « Type de connexion ») :
+
+### 1. Identifiants (par défaut)
+Utilisateur + mot de passe → `Authorization: Basic base64(user:password)`. Mode historique, aucun changement pour les utilisateurs existants.
+
+### 2. Personal Access Token (DHIS2 ≥ 2.38)
+Token généré dans DHIS2 : **Profil utilisateur → Personal access tokens → New token** (affiché une seule fois, préfixe `d2pat_`). Saisir le token dans le champ dédié → le header envoyé à DHIS2 est `Authorization: ApiToken d2pat_...`.
+
+- Le proxy PHP (`api/dhis2-proxy.php`) transmet le header tel quel : aucun changement serveur nécessaire.
+- En cas d'erreur 401 en mode token : le token est invalide, expiré ou révoqué — le régénérer dans le profil DHIS2.
+- Dans le module « Export métadonnées org units » (instance cible), un token `d2pat_...` saisi dans le champ mot de passe est automatiquement détecté et utilisé comme ApiToken.
+
+Bonnes pratiques : un token par intégration/environnement, date d'expiration la plus courte possible, révocation immédiate en cas de doute.

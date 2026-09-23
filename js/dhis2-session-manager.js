@@ -21,8 +21,10 @@ class DHIS2SessionManager {
      * @param {string} url - URL de l'instance DHIS2
      * @param {string} username - Nom d'utilisateur
      * @param {string} password - Mot de passe
+     * @param {string} authType - 'basic' ou 'token'
+     * @param {string} token - Personal Access Token (mode 'token' uniquement)
      */
-    async initialize(url, username, password) {
+    async initialize(url, username, password, authType, token) {
         // Formater l'URL
         let formattedUrl = url.trim();
         if (!formattedUrl.startsWith('http')) {
@@ -30,11 +32,17 @@ class DHIS2SessionManager {
         }
         formattedUrl = formattedUrl.replace(/\/$/, '');
 
+        // Type d'authentification : 'basic' (défaut) ou 'token' (Personal Access Token, DHIS2 >= 2.38)
+        this.authType = authType || 'basic';
+
         // Créer la configuration
         this.config = {
             url: formattedUrl,
             username: username,
-            authHeader: 'Basic ' + btoa(username + ':' + password),
+            authType: this.authType,
+            authHeader: this.authType === 'token'
+                ? 'ApiToken ' + token
+                : 'Basic ' + btoa(username + ':' + password),
             connectedAt: new Date().toISOString()
         };
 
@@ -119,8 +127,19 @@ class DHIS2SessionManager {
             }
 
             if (error.responseJSON) {
-                const proxyError = new Error(error.responseJSON.message || 'Erreur de proxy');
-                proxyError.data = error.responseJSON.data;
+                let msg = error.responseJSON.message || 'Erreur de proxy';
+                // Ajouter le détail renvoyé par l'instance DHIS2 si présent
+                const detail = error.responseJSON.data;
+                if (detail) {
+                    const detailStr = typeof detail === 'string'
+                        ? detail
+                        : (detail.message || JSON.stringify(detail));
+                    if (detailStr && !msg.includes(detailStr)) {
+                        msg += ' | Réponse DHIS2: ' + detailStr;
+                    }
+                }
+                const proxyError = new Error(msg);
+                proxyError.data = detail;
                 proxyError.status = error.responseJSON.status;
                 throw proxyError;
             }

@@ -212,11 +212,15 @@ async function loadTargetConfig() {
     }
 
     const url = stored.url.replace(/\/+$/, '');
+    // Support PAT : un token saisi dans le champ mot de passe est utilisé comme ApiToken
+    const isToken = stored.method === 'plain-token' || /^d2pat_/.test(password);
     return {
         url: url,
         username: stored.username,
         password: password,
-        authHeader: 'Basic ' + btoa(stored.username + ':' + password)
+        authHeader: isToken
+            ? 'ApiToken ' + password
+            : 'Basic ' + btoa(stored.username + ':' + password)
     };
 }
 
@@ -1002,6 +1006,16 @@ function buildTargetConfigFromForm() {
 
     if (!formattedUrl || !username) {
         return null;
+    }
+
+    // Support PAT : un token DHIS2 (d2pat_...) saisi dans le champ mot de passe est utilisé comme ApiToken
+    if (password && /^d2pat_/.test(password)) {
+        return {
+            url: formattedUrl,
+            username: username,
+            password: password,
+            authHeader: 'ApiToken ' + password
+        };
     }
 
     if (password) {

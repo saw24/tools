@@ -214,11 +214,18 @@ class DHIS2ProxyHandler
         curl_setopt_array($ch, $curlOptions);
 
         // Debug: Logger la requête (à supprimer en production)
+        // NB: on masque le header Authorization pour ne jamais tracer le token/mot de passe
+        $logHeaders = $headers;
+        foreach ($logHeaders as $i => $h) {
+            if (stripos($h, 'Authorization:') === 0) {
+                $logHeaders[$i] = 'Authorization: [MASKED]';
+            }
+        }
         error_log("=== DHIS2 Proxy Debug ===");
         error_log("URL: " . $fullUrl);
         error_log("Method: " . $this->dhis2Method);
         error_log("Auth Header: " . ($this->dhis2Auth ? "Present" : "Missing"));
-        error_log("Headers: " . json_encode($headers));
+        error_log("Headers: " . json_encode($logHeaders));
 
         // Exécuter la requête
         $response = curl_exec($ch);
@@ -339,7 +346,23 @@ class DHIS2ProxyHandler
             503 => 'Service DHIS2 indisponible'
         ];
 
-        return $defaultMessages[$httpCode] ?? "Erreur HTTP $httpCode";
+        $message = $defaultMessages[$httpCode] ?? "Erreur HTTP $httpCode";
+
+        // Aucun message structuré exploitable : inclure un extrait du body brut
+        // renvoyé par DHIS2 pour faciliter le diagnostic (ex: page HTML d'erreur,
+        // message texte du reverse proxy, etc.)
+        if (is_string($response) && trim($response) !== '') {
+            $excerpt = trim(strip_tags($response));
+            if ($excerpt === '') {
+                $excerpt = trim($response);
+            }
+            if (strlen($excerpt) > 300) {
+                $excerpt = substr($excerpt, 0, 300) . '…';
+            }
+            $message .= ' | Réponse DHIS2: ' . $excerpt;
+        }
+
+        return $message;
     }
 
     /**
