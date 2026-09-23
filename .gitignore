@@ -32,8 +32,10 @@ error_log
 *.tmp
 *.temp
 
-# PHP
-vendor/
+# PHP (composer.lock : gardé au cas où Composer serait introduit un jour ; vendor/
+# n'est PAS ignoré ici — c'est le dossier des bibliothèques front vendorisées
+# manuellement (jQuery, Leaflet, Font Awesome...), à committer normalement, pas
+# un dossier régénéré par un gestionnaire de dépendances)
 composer.lock
 
 # Backup files
