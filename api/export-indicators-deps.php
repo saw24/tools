@@ -438,7 +438,7 @@ class IndicatorExportAPI
             $shapedCocs[$coc['id']] = [
                 'id' => $coc['id'],
                 'aggregationType' => 'SUM',
-                'dimensionItemType' => 'CATEGORY_OPTION_COMBO',
+                'dimensionItemType' => 'CATEGORY_OPTION',
                 'categoryCombo' => ['id' => $coc['categoryCombo']['id']],
                 'categoryOptions' => array_map(function ($co) {
                     return ['id' => $co['id']]; }, $coc['categoryOptions'] ?? []),
