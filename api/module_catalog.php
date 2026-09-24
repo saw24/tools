@@ -25,6 +25,7 @@ function dhis2ToolsModuleCatalog()
         // Export
         array('path' => 'export-data-elements.html', 'name' => 'Export Éléments de Données', 'category' => 'Export', 'icon' => 'fa-download'),
         array('path' => 'export-data-elements-dependencies.html', 'name' => 'Export Éléments + Dépendances', 'category' => 'Export', 'icon' => 'fa-file-export'),
+        array('path' => 'export-indicators-dependencies.html', 'name' => 'Export Indicateurs + Dépendances', 'category' => 'Export', 'icon' => 'fa-percentage'),
         array('path' => 'export-category-combos.html', 'name' => 'Export CategoryCombos + Dépendances', 'category' => 'Export', 'icon' => 'fa-file-export'),
         array('path' => 'export-form-dependencies.html', 'name' => 'Export Formulaire + Dépendances', 'category' => 'Export', 'icon' => 'fa-file-export'),
         array('path' => 'export-organisation-units.html', 'name' => 'Export Unités d\'Organisation', 'category' => 'Export', 'icon' => 'fa-sitemap'),

@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Indicateurs + Dépendances - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="vendor/fonts/inter.css"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .module-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .module-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .module-header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .export-form {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 100px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-helper {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .form-helper.valid {
+            color: #10b981;
+        }
+
+        /* Selection mode tabs (Liste / UIDs), inspired by export-organisation-units.html */
+        .filter-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .filter-option:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .filter-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .filter-option:has(input[type="radio"]:checked) {
+            background: rgba(102, 126, 234, 0.15);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-option-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+            width: 100%;
+        }
+
+        .filter-option-label i {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .filter-option:has(input[type="radio"]:checked) .filter-option-label,
+        .filter-option:has(input[type="radio"]:checked) .filter-option-label i {
+            color: #667eea;
+        }
+
+        .filter-details {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Searchable indicator list, inspired by export-form-dependencies.html */
+        .search-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .search-row input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-row input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .list-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-small:hover {
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .indicator-list {
+            width: 100%;
+            max-height: 360px;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .indicator-row {
+            display: grid;
+            grid-template-columns: 22px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .indicator-row:last-child {
+            border-bottom: none;
+        }
+
+        .indicator-row:hover,
+        .indicator-row.selected {
+            background: rgba(102, 126, 234, 0.12);
+        }
+
+        .indicator-row input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .indicator-name {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+
+        .indicator-meta {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-top: 3px;
+            word-break: break-word;
+        }
+
+        .indicator-type-badge {
+            color: var(--text-secondary);
+            font-size: 12px;
+            padding: 4px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .list-state {
+            padding: 30px 20px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        .list-state i {
+            display: block;
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .checkbox-item small {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        @media (max-width: 700px) {
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+
+            .search-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .indicator-row {
+                grid-template-columns: 22px 1fr;
+            }
+
+            .indicator-type-badge {
+                grid-column: 2;
+                justify-self: start;
+            }
+        }
+
+        .btn-export {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-export:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-export:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .summary-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .summary-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-item.empty {
+            opacity: 0.35;
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+        }
+
+        .summary-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .warnings-box {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .warnings-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #f59e0b;
+        }
+
+        .warnings-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .warnings-list li {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar for Auth -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="module-container">
+        <header class="module-header">
+            <h1><i class="fas fa-percentage"></i> Export Indicateurs + Dépendances</h1>
+            <p class="subtitle">Exportez des indicateurs DHIS2 avec toutes les dépendances nécessaires à leur
+                réimport : type d'indicateur, éléments référencés dans le numérateur/dénominateur, chaîne
+                CategoryCombo complète, constantes, groupes d'unités, etc.</p>
+        </header>
+
+        <div class="export-form">
+            <form id="exportForm">
+                <div class="form-group">
+                    <label>
+                        <i class="fas fa-crosshairs"></i> Mode de sélection
+                    </label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
+                        <label class="filter-option">
+                            <input type="radio" name="selectionMode" value="list" checked onchange="updateSelectionModeUI()">
+                            <span class="filter-option-label">
+                                <i class="fas fa-list-check"></i> Liste (sélection)
+                            </span>
+                        </label>
+                        <label class="filter-option">
+                            <input type="radio" name="selectionMode" value="uids" onchange="updateSelectionModeUI()">
+                            <span class="filter-option-label">
+                                <i class="fas fa-keyboard"></i> UID(s) manuels
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Mode: Liste (recherche + sélection multiple) -->
+                <div class="form-group filter-details" id="modeList">
+                    <label for="indicatorSearch">
+                        <i class="fas fa-list"></i> Indicateurs disponibles
+                    </label>
+                    <div class="search-row">
+                        <input type="text" id="indicatorSearch" placeholder="Rechercher par nom, UID ou type..." autocomplete="off">
+                        <div class="list-actions">
+                            <button type="button" class="btn-small" id="btnSelectVisible">
+                                <i class="fas fa-check-square"></i> Sélectionner visibles
+                            </button>
+                            <button type="button" class="btn-small" id="btnClearSelection">
+                                <i class="fas fa-times"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="indicator-list" id="indicatorList">
+                        <div class="list-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Chargement des indicateurs...
+                        </div>
+                    </div>
+                    <div class="form-helper" id="selectionHelper">
+                        Aucun indicateur sélectionné.
+                    </div>
+                </div>
+
+                <!-- Mode: UID(s) manuels -->
+                <div class="form-group filter-details" id="modeUids" style="display: none;">
+                    <label for="uidsInput">
+                        <i class="fas fa-list"></i> UID(s) des Indicateurs
+                    </label>
+                    <textarea id="uidsInput"
+                        placeholder="Ex: hX7n8Y4pu89;abc123def45,xyz987uvw65&#10;&#10;Séparez les UID par des points-virgules (;) ou des virgules (,)"></textarea>
+                    <div class="form-helper" id="uidHelper">
+                        Séparez les UID par des <strong>points-virgules (;)</strong> ou des <strong>virgules
+                            (,)</strong>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Options d'export</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeLegendSets" checked>
+                            <label for="includeLegendSets">
+                                Inclure les LegendSets
+                                <small>Nécessaire si l'indicateur utilise des classes de légende pour son affichage.</small>
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeGroups" checked>
+                            <label for="includeGroups">
+                                Inclure les IndicatorGroups / CategoryOptionGroups
+                                <small>Utile si les indicateurs ou leurs options de catégories sont regroupés.</small>
+                            </label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="includeGroupSets" checked>
+                            <label for="includeGroupSets">
+                                Inclure les GroupSets associés
+                                <small>Ajoute les ensembles des groupes exportés (IndicatorGroupSets, CategoryOptionGroupSets).</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-export" id="btnExport">
+                    <i class="fas fa-download"></i>
+                    <span id="btnText">Exporter</span>
+                </button>
+            </form>
+
+            <div class="alert" id="alertBox"></div>
+
+            <div class="warnings-box" id="warningsBox">
+                <div class="warnings-title">
+                    <i class="fas fa-triangle-exclamation"></i> Points d'attention
+                </div>
+                <ul class="warnings-list" id="warningsList"></ul>
+            </div>
+
+            <div class="summary-box" id="summaryBox">
+                <div class="summary-title">
+                    <i class="fas fa-chart-bar"></i> Résumé de l'export
+                </div>
+                <div id="summaryContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback">
+                    <div class="feedback-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="feedback-content">
+                        <div class="feedback-title">Titre</div>
+                        <div class="feedback-message">Message</div>
+                    </div>
+                    <button class="feedback-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.40.0" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="vendor/jquery/jquery-3.7.1.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        let validUids = [];
+        let allIndicators = [];
+        let filteredIndicators = [];
+        const selectedIndicatorIds = new Set();
+
+        window.showToast = window.showToast || function (type, title, message) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type]}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+        };
+
+        $(document).ready(async function () {
+            if (!dhis2Session.isConnected()) {
+                showToast('error', 'Session requise', 'Vous allez être redirigé pour vous connecter...');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 3000);
+                return;
+            }
+
+            await loadIndicators();
+        });
+
+        // --- Mode de sélection (Liste / UIDs manuels) ---
+        function getSelectionMode() {
+            return $('input[name="selectionMode"]:checked').val();
+        }
+
+        function updateSelectionModeUI() {
+            const mode = getSelectionMode();
+            $('#modeList').toggle(mode === 'list');
+            $('#modeUids').toggle(mode === 'uids');
+            updateButtonText();
+        }
+
+        function getSelectedUids() {
+            return getSelectionMode() === 'list' ? Array.from(selectedIndicatorIds) : validUids;
+        }
+
+        function updateButtonText() {
+            const count = getSelectedUids().length;
+            $('#btnText').text(count > 0 ? `Exporter ${count} indicateur(s)` : 'Exporter');
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        // --- Mode: UID(s) manuels ---
+        function parseUids(input) {
+            const uids = input
+                .split(/[,;\s]+/)
+                .map(u => u.trim())
+                .filter(u => u.length === 11);
+
+            validUids = [...new Set(uids)];
+
+            const helper = $('#uidHelper');
+            if (validUids.length > 0) {
+                helper.addClass('valid');
+                helper.html(`<i class="fas fa-check-circle"></i> <strong>${validUids.length} UID valide(s) détecté(s)</strong>`);
+            } else {
+                helper.removeClass('valid');
+                helper.html('Séparez les UID par des <strong>points-virgules (;)</strong> ou des <strong>virgules (,)</strong>');
+            }
+
+            updateButtonText();
+        }
+
+        $('#uidsInput').on('input', function () {
+            parseUids($(this).val());
+        });
+
+        // --- Mode: Liste (recherche + sélection multiple) ---
+        function getIndicatorName(ind) {
+            return ind.displayName || ind.name || ind.id;
+        }
+
+        async function loadIndicators() {
+            try {
+                $('#indicatorList').html(`
+                    <div class="list-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Chargement des indicateurs...
+                    </div>
+                `);
+
+                const response = await dhis2Session.getIndicators({
+                    fields: 'id,displayName,name,shortName,indicatorType[name]',
+                    paging: false
+                });
+
+                allIndicators = (response.indicators || []).sort((a, b) =>
+                    getIndicatorName(a).localeCompare(getIndicatorName(b))
+                );
+                filteredIndicators = [...allIndicators];
+                renderIndicatorList();
+                updateSelectionState();
+                showToast('success', 'Chargé', `${allIndicators.length} indicateur(s) chargé(s)`);
+            } catch (error) {
+                console.error('Erreur chargement indicateurs:', error);
+                $('#indicatorList').html(`
+                    <div class="list-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Impossible de charger les indicateurs.
+                    </div>
+                `);
+                showToast('error', 'Erreur', error.message || 'Impossible de charger les indicateurs.');
+            }
+        }
+
+        $('#indicatorSearch').on('input', function () {
+            applyIndicatorFilter($(this).val());
+        });
+
+        function applyIndicatorFilter(searchTerm) {
+            const term = searchTerm.toLowerCase().trim();
+            filteredIndicators = term
+                ? allIndicators.filter(ind => {
+                    const haystack = `${ind.id} ${getIndicatorName(ind)} ${ind.indicatorType?.name || ''}`.toLowerCase();
+                    return haystack.includes(term);
+                })
+                : [...allIndicators];
+
+            renderIndicatorList();
+            updateSelectionState();
+        }
+
+        function renderIndicatorList() {
+            if (filteredIndicators.length === 0) {
+                $('#indicatorList').html(`
+                    <div class="list-state">
+                        <i class="fas fa-inbox"></i>
+                        Aucun indicateur ne correspond à votre recherche.
+                    </div>
+                `);
+                return;
+            }
+
+            const html = filteredIndicators.map(ind => {
+                const checked = selectedIndicatorIds.has(ind.id) ? 'checked' : '';
+                const selectedClass = selectedIndicatorIds.has(ind.id) ? ' selected' : '';
+                const name = escapeHtml(getIndicatorName(ind));
+                const typeName = escapeHtml(ind.indicatorType?.name || 'N/A');
+
+                return `
+                    <div class="indicator-row${selectedClass}" data-id="${ind.id}">
+                        <input type="checkbox" class="indicator-checkbox" data-id="${ind.id}" ${checked}>
+                        <div>
+                            <div class="indicator-name">${name}</div>
+                            <div class="indicator-meta">${ind.id}</div>
+                        </div>
+                        <span class="indicator-type-badge">${typeName}</span>
+                    </div>
+                `;
+            }).join('');
+
+            $('#indicatorList').html(html);
+        }
+
+        $('#btnSelectVisible').on('click', function () {
+            filteredIndicators.forEach(ind => selectedIndicatorIds.add(ind.id));
+            renderIndicatorList();
+            updateSelectionState();
+        });
+
+        $('#btnClearSelection').on('click', function () {
+            selectedIndicatorIds.clear();
+            renderIndicatorList();
+            updateSelectionState();
+        });
+
+        $(document).on('change', '.indicator-checkbox', function (e) {
+            e.stopPropagation();
+            const id = $(this).data('id');
+            setIndicatorSelection(id, $(this).is(':checked'));
+        });
+
+        $(document).on('click', '.indicator-row', function (e) {
+            if ($(e.target).is('input')) {
+                return;
+            }
+
+            const checkbox = $(this).find('.indicator-checkbox');
+            checkbox.prop('checked', !checkbox.is(':checked')).trigger('change');
+        });
+
+        function setIndicatorSelection(id, isSelected) {
+            if (isSelected) {
+                selectedIndicatorIds.add(id);
+            } else {
+                selectedIndicatorIds.delete(id);
+            }
+
+            $(`.indicator-row[data-id="${id}"]`).toggleClass('selected', isSelected);
+            updateSelectionState();
+        }
+
+        function updateSelectionState() {
+            const selectedCount = selectedIndicatorIds.size;
+            const visibleCount = filteredIndicators.length;
+            const totalCount = allIndicators.length;
+            const helper = $('#selectionHelper');
+
+            if (selectedCount > 0) {
+                helper.addClass('valid');
+                helper.html(`<i class="fas fa-check-circle"></i> <strong>${selectedCount} indicateur(s) sélectionné(s)</strong> sur ${totalCount}. ${visibleCount} visible(s).`);
+            } else {
+                helper.removeClass('valid');
+                helper.html(`Aucun indicateur sélectionné. ${visibleCount} visible(s) sur ${totalCount}.`);
+            }
+
+            updateButtonText();
+        }
+
+        $('#exportForm').on('submit', async function (e) {
+            e.preventDefault();
+
+            const uids = getSelectedUids();
+            if (uids.length === 0) {
+                const mode = getSelectionMode();
+                showAlert('error', mode === 'list'
+                    ? 'Veuillez sélectionner au moins un indicateur.'
+                    : 'Veuillez entrer au moins un UID valide');
+                return;
+            }
+
+            const includeGroups = $('#includeGroups').is(':checked');
+            const includeGroupSets = $('#includeGroupSets').is(':checked');
+            const includeLegendSets = $('#includeLegendSets').is(':checked');
+
+            await exportIndicators(uids, includeGroups, includeGroupSets, includeLegendSets);
+        });
+
+        function showAlert(type, message) {
+            const alert = $('#alertBox');
+            alert.removeClass('success error').addClass(type);
+            alert.text(message);
+            alert.fadeIn();
+
+            setTimeout(() => {
+                alert.fadeOut();
+            }, 5000);
+        }
+
+        function showWarnings(warnings) {
+            const box = $('#warningsBox');
+            const list = $('#warningsList');
+            list.empty();
+
+            if (!warnings || warnings.length === 0) {
+                box.fadeOut();
+                return;
+            }
+
+            warnings.forEach(w => list.append(`<li>${$('<div>').text(w).html()}</li>`));
+            box.fadeIn();
+        }
+
+        const SUMMARY_LABELS = {
+            indicators: 'Indicateurs',
+            indicatorTypes: "Types d'indicateur",
+            dataElements: 'Éléments de données',
+            categoryCombos: 'CategoryCombos',
+            categories: 'Catégories',
+            categoryOptions: 'Options',
+            categoryOptionCombos: "Combos d'options",
+            constants: 'Constantes',
+            dataSets: 'DataSets (taux de complétude)',
+            organisationUnitGroups: "Groupes d'unités d'organisation",
+            trackedEntityAttributes: 'Attributs de programme',
+            legendSets: 'LegendSets',
+            indicatorGroups: "Groupes d'indicateurs",
+            indicatorGroupSets: "Ensembles de groupes d'indicateurs",
+            categoryOptionGroups: "Groupes d'options",
+            categoryOptionGroupSets: "Ensembles de groupes d'options"
+        };
+
+        function showSummary(summary) {
+            const content = $('#summaryContent');
+            content.empty();
+
+            Object.keys(SUMMARY_LABELS).forEach(key => {
+                const value = summary[key] ?? 0;
+                const row = $(`
+                    <div class="summary-item ${value === 0 ? 'empty' : ''}">
+                        <span class="summary-label">${SUMMARY_LABELS[key]}</span>
+                        <span class="summary-value">${value}</span>
+                    </div>
+                `);
+                content.append(row);
+            });
+
+            $('#summaryBox').fadeIn();
+        }
+
+        async function exportIndicators(uids, includeGroups, includeGroupSets, includeLegendSets) {
+            const btn = $('#btnExport');
+            const btnText = $('#btnText');
+            const originalText = btnText.text();
+
+            btn.prop('disabled', true);
+            btnText.html('<i class="fas fa-spinner fa-spin"></i> Export en cours...');
+            $('#alertBox').fadeOut();
+            $('#summaryBox').fadeOut();
+            $('#warningsBox').fadeOut();
+
+            try {
+                showToast('info', 'Export en cours', `Récupération de ${uids.length} indicateur(s)...`);
+
+                const config = dhis2Session.getConfig();
+                if (!config) {
+                    throw new Error('Session DHIS2 non trouvée. Veuillez vous reconnecter.');
+                }
+
+                const payload = {
+                    dhis2_url: config.url,
+                    dhis2_auth: config.authHeader,
+                    indicatorUids: uids.join(';'),
+                    includeGroups,
+                    includeGroupSets,
+                    includeLegendSets
+                };
+
+                const response = await $.ajax({
+                    url: 'api/export-indicators-deps.php',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    dataType: 'json'
+                });
+
+                if (!response.success) {
+                    throw new Error(response.message || 'Erreur lors de l\'export');
+                }
+
+                const blob = new Blob([JSON.stringify(response.data, null, 2)], {
+                    type: 'application/json'
+                });
+                const filename = `indicators-export-${new Date().toISOString().split('T')[0]}.json`;
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                showAlert('success', `✅ Export téléchargé : ${filename}`);
+                showSummary(response.summary);
+                showWarnings(response.warnings);
+                showToast('success', 'Export réussi', `${response.summary.indicators} indicateur(s) exporté(s)`);
+
+            } catch (error) {
+                console.error('Erreur export:', error);
+                showAlert('error', `❌ Erreur : ${error.message || 'Une erreur est survenue'}`);
+                showToast('error', 'Erreur d\'export', error.message || 'Impossible d\'exporter les indicateurs');
+            } finally {
+                btn.prop('disabled', false);
+                btnText.text(originalText);
+            }
+        }
+    </script>
+</body>
+
+</html>
