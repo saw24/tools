@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Indicateurs + Dépendances - DHIS2 Tools</title>
+
+    <!-- Google Fonts -->
+    <link href="vendor/fonts/inter.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+    <link rel="stylesheet" href="css/import-metadata.css">
+
+    <style>
+        .info-box,
+        .warning-box {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 16px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .info-box {
+            background: rgba(88, 166, 255, 0.08);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            color: var(--text-secondary);
+        }
+
+        .info-box i {
+            color: #58a6ff;
+            font-size: 18px;
+            margin-top: 2px;
+        }
+
+        .warning-box {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--text-secondary);
+        }
+
+        .warning-box i {
+            color: #f85149;
+            font-size: 18px;
+            margin-top: 2px;
+        }
+
+        .points-box {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .points-box-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #f59e0b;
+        }
+
+        .points-box ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .points-box ul li {
+            margin-bottom: 6px;
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f85149 0%, #b91c1c 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .summary-tile {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .summary-tile.empty {
+            opacity: 0.35;
+        }
+
+        .summary-tile .label {
+            color: var(--text-secondary);
+        }
+
+        .summary-tile .value {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .option-field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .option-field select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .option-field small {
+            display: block;
+            margin-top: 6px;
+            color: var(--text-muted);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            cursor: pointer;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .checkbox-item small {
+            display: block;
+            margin-top: 4px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .type-report {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+
+        .type-report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .type-report-stats {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .type-report-errors {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #f85149;
+        }
+
+        .type-report-errors div {
+            margin-bottom: 4px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .status-pill.OK {
+            background: rgba(63, 185, 80, 0.15);
+            color: #3fb950;
+        }
+
+        .status-pill.WARNING {
+            background: rgba(210, 153, 34, 0.15);
+            color: #d29922;
+        }
+
+        .status-pill.ERROR {
+            background: rgba(248, 81, 73, 0.15);
+            color: #f85149;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-percentage"></i>
+                    <h1>Import Indicateurs + Dépendances</h1>
+                </div>
+                <p class="subtitle">Importez sur cette instance le paquet JSON généré par le module <strong>Export
+                        Indicateurs + Dépendances</strong> (indicateurs, types, éléments de données, chaîne
+                    CategoryCombo, constantes, groupes...), avec simulation (dry run) avant l'envoi réel.</p>
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step-item active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Fichier</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Aperçu &amp; Options</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Dry Run</div>
+            </div>
+            <div class="step-divider"></div>
+            <div class="step-item" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Import</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Fichier -->
+        <section class="step-content glass-card" id="step1" data-step="1">
+            <div class="section-header">
+                <i class="fas fa-file-import"></i>
+                <h2>Fichier d'export</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Sélectionnez le fichier <code>indicators-export-*.json</code> téléchargé depuis le module
+                        Export Indicateurs + Dépendances. Un paquet de métadonnées DHIS2 brut (avec des clés comme
+                        <code>indicators</code>, <code>dataElements</code>...) fonctionne également.</p>
+                </div>
+
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>Glissez votre fichier ici</h3>
+                    <p>ou cliquez pour parcourir (.json)</p>
+                    <input type="file" id="fileInput" accept=".json" hidden>
+                    <div class="file-info" id="fileInfo" style="display: none;">
+                        <i class="fas fa-file-alt"></i>
+                        <span id="fileName">fichier.json</span>
+                        <button class="btn-icon" id="btnRemoveFile" type="button"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+
+                <div class="warning-box" id="fileErrorBox" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p id="fileErrorText"></p>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large btn-gradient" id="btnToPreview" disabled>
+                    Suivant : Aperçu &amp; Options
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Aperçu & Options -->
+        <section class="step-content glass-card" id="step2" data-step="2" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-list-check"></i>
+                <h2>Aperçu du paquet &amp; Options d'import</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="summary-grid" id="summaryGrid"></div>
+
+                <div class="points-box" id="pointsBox">
+                    <div class="points-box-title">
+                        <i class="fas fa-triangle-exclamation"></i> Points d'attention (issus de l'export)
+                    </div>
+                    <ul id="pointsList"></ul>
+                </div>
+
+                <div class="options-grid">
+                    <div class="option-field">
+                        <label for="importStrategy">Stratégie d'import</label>
+                        <select id="importStrategy">
+                            <option value="CREATE_AND_UPDATE" selected>CREATE_AND_UPDATE (créer + mettre à jour)</option>
+                            <option value="CREATE">CREATE (ignorer les objets existants)</option>
+                            <option value="UPDATE">UPDATE (mettre à jour uniquement)</option>
+                        </select>
+                        <small>CREATE_AND_UPDATE est recommandé pour un premier import comme pour une resynchronisation.</small>
+                    </div>
+                    <div class="option-field">
+                        <label for="atomicMode">Mode atomique</label>
+                        <select id="atomicMode">
+                            <option value="ALL" selected>ALL (tout ou rien)</option>
+                            <option value="NONE">NONE (importer ce qui est valide)</option>
+                        </select>
+                        <small>ALL annule tout l'import au moindre objet en erreur — plus sûr pour un paquet avec
+                            dépendances.</small>
+                    </div>
+                    <div class="option-field">
+                        <label for="mergeMode">Mode de fusion (mise à jour)</label>
+                        <select id="mergeMode">
+                            <option value="MERGE" selected>MERGE (fusionner les champs)</option>
+                            <option value="REPLACE">REPLACE (remplacer l'objet entier)</option>
+                        </select>
+                        <small>MERGE évite d'écraser des champs non inclus dans le paquet sur un objet déjà
+                            existant sur la cible.</small>
+                    </div>
+                </div>
+
+                <div class="checkbox-item">
+                    <input type="checkbox" id="includeDataSets">
+                    <label for="includeDataSets">
+                        Inclure les DataSets référencés
+                        <small>Ces DataSets ne sont exportés qu'avec un jeu de champs minimal (nom, periodType,
+                            categoryCombo) pour la résolution des tokens <code>R{dataSet.METRIC}</code>. Ils
+                            doivent normalement déjà exister sur l'instance cible : ne cochez cette case que si
+                            vous savez ce que vous faites, sinon un import en mode REPLACE pourrait écraser des
+                            champs du DataSet existant (unités d'organisation, éléments...).</small>
+                    </label>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" onclick="goToStep(1)">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-gradient" id="btnToDryRun">
+                    Suivant : Dry Run
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 3: Dry Run -->
+        <section class="step-content glass-card" id="step3" data-step="3" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-flask"></i>
+                <h2>Simulation (Dry Run)</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="info-box">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Cette étape envoie le paquet à <code>/api/metadata?dryRun=true</code> : DHIS2 valide chaque
+                        objet (références manquantes, formats invalides, expressions d'indicateur non résolues...)
+                        sans rien modifier sur le serveur.</p>
+                </div>
+
+                <div id="dryRunStatusContainer"></div>
+
+                <div class="progress-container" id="dryRunProgress" style="display: none;">
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">Simulation en cours...</div>
+                </div>
+
+                <div id="dryRunTypeReports"></div>
+
+                <div class="console-log" id="dryRunLog">
+                    <div class="log-entry system">Prêt pour la simulation...</div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" onclick="goToStep(2)">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-success" id="btnRunDryRun">
+                    <i class="fas fa-play"></i> Lancer la Simulation
+                </button>
+                <button class="btn btn-large btn-gradient" id="btnToImport" disabled>
+                    Suivant : Import Réel
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 4: Import -->
+        <section class="step-content glass-card" id="step4" data-step="4" style="display: none;">
+            <div class="section-header">
+                <i class="fas fa-upload"></i>
+                <h2>Importation Finale</h2>
+            </div>
+
+            <div class="card-body">
+                <div class="warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Cette action modifie les données sur l'instance DHIS2 connectée. Assurez-vous d'avoir validé
+                        le Dry Run et que vous êtes bien connecté à la <strong>bonne</strong> instance (cible, pas
+                        source).</p>
+                </div>
+
+                <div class="progress-container" id="importProgress" style="display: none;">
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-text">Import en cours...</div>
+                </div>
+
+                <div id="importStatusContainer"></div>
+
+                <div class="import-stats" id="importStats" style="display: none;">
+                    <div class="stat-card success">
+                        <span class="stat-value" id="statCreated">0</span>
+                        <span class="stat-label">Créés</span>
+                    </div>
+                    <div class="stat-card warning">
+                        <span class="stat-value" id="statUpdated">0</span>
+                        <span class="stat-label">Mis à jour</span>
+                    </div>
+                    <div class="stat-card error">
+                        <span class="stat-value" id="statIgnored">0</span>
+                        <span class="stat-label">Ignorés/Erreurs</span>
+                    </div>
+                </div>
+
+                <div id="importTypeReports"></div>
+
+                <div class="console-log" id="importLog">
+                    <div class="log-entry system">En attente de confirmation...</div>
+                </div>
+            </div>
+
+            <div class="step-actions">
+                <button class="btn btn-large" onclick="goToStep(3)">
+                    <i class="fas fa-arrow-left"></i> Retour
+                </button>
+                <button class="btn btn-large btn-danger" id="btnRunImport">
+                    <i class="fas fa-cloud-upload-alt"></i> CONFIRMER ET IMPORTER
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- DHIS2 Login Modal -->
+    <div class="auth-modal-overlay" id="dhis2LoginModal">
+        <div class="auth-modal-content">
+            <div class="auth-modal-header">
+                <i class="fas fa-plug"></i>
+                <h2>Connexion DHIS2</h2>
+                <button class="btn-icon close-auth-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-feedback" id="authFeedback">
+                    <div class="feedback-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="feedback-content">
+                        <div class="feedback-title">Titre</div>
+                        <div class="feedback-message">Message</div>
+                    </div>
+                    <button class="feedback-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="formDHIS2Login">
+                    <div class="auth-form-group">
+                        <label for="dhis2UrlInput">URL de l'instance</label>
+                        <input type="text" id="dhis2UrlInput" class="auth-input"
+                            placeholder="https://play.dhis2.org/2.40.0" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2UsernameInput">Nom d'utilisateur</label>
+                        <input type="text" id="dhis2UsernameInput" class="auth-input" placeholder="admin" required>
+                    </div>
+                    <div class="auth-form-group">
+                        <label for="dhis2PasswordInput">Mot de passe</label>
+                        <input type="password" id="dhis2PasswordInput" class="auth-input" placeholder="••••••••"
+                            required>
+                    </div>
+                    <button type="submit" class="btn-submit-auth">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- jQuery -->
+    <script src="vendor/jquery/jquery-3.7.1.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        const appState = {
+            step: 1,
+            fileName: null,
+            metadataPayload: null, // Object posted to /api/metadata ({indicators: [...], dataElements: [...], ...})
+            summaryCounts: null,
+            warnings: [],
+            originalDataSets: [] // immutable snapshot of payload.dataSets as parsed from the file
+        };
+
+        const SUMMARY_LABELS = {
+            indicators: 'Indicateurs',
+            indicatorTypes: "Types d'indicateur",
+            dataElements: 'Éléments de données',
+            categoryCombos: 'CategoryCombos',
+            categories: 'Catégories',
+            categoryOptions: 'Options',
+            categoryOptionCombos: "Combos d'options",
+            constants: 'Constantes',
+            dataSets: 'DataSets (taux de complétude)',
+            organisationUnitGroups: "Groupes d'unités d'organisation",
+            trackedEntityAttributes: 'Attributs de programme',
+            legendSets: 'LegendSets',
+            indicatorGroups: "Groupes d'indicateurs",
+            indicatorGroupSets: "Ensembles de groupes d'indicateurs",
+            categoryOptionGroups: "Groupes d'options",
+            categoryOptionGroupSets: "Ensembles de groupes d'options"
+        };
+
+        window.showToast = window.showToast || function (type, title, message) {
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+            const toast = $(`
+                <div class="toast toast-${type}">
+                    <i class="fas ${icons[type] || icons.info}"></i>
+                    <div class="toast-content">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-message">${message}</div>
+                    </div>
+                </div>
+            `);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 4000);
+        };
+
+        $(document).ready(function () {
+            if (!dhis2Session.isConnected()) {
+                showToast('error', 'Session requise', 'Vous allez être redirigé pour vous connecter...');
+                setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+                return;
+            }
+
+            initUpload();
+            $('#btnToPreview').on('click', () => { buildPreview(); goToStep(2); });
+            $('#btnToDryRun').on('click', () => goToStep(3));
+            $('#btnToImport').on('click', () => goToStep(4));
+            $('#includeDataSets').on('change', onToggleDataSets);
+            $('#btnRunDryRun').on('click', runDryRun);
+            $('#btnRunImport').on('click', runImport);
+        });
+
+        // --- Navigation ---
+        function goToStep(step) {
+            appState.step = step;
+            $('.step-content').hide();
+            $(`#step${step}`).show();
+
+            $('.step-item').removeClass('active completed');
+            $('.step-item').each(function () {
+                const s = parseInt($(this).data('step'), 10);
+                if (s < step) $(this).addClass('completed');
+                else if (s === step) $(this).addClass('active');
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[char]));
+        }
+
+        // --- Step 1: Upload & parsing ---
+        function initUpload() {
+            const $dropZone = $('#uploadArea');
+
+            $dropZone.on('dragover', (e) => { e.preventDefault(); $dropZone.addClass('dragover'); });
+            $dropZone.on('dragleave', () => $dropZone.removeClass('dragover'));
+            $dropZone.on('drop', (e) => {
+                e.preventDefault();
+                $dropZone.removeClass('dragover');
+                handleFile(e.originalEvent.dataTransfer.files[0]);
+            });
+            $dropZone.on('click', (e) => {
+                if ($(e.target).closest('#btnRemoveFile').length) return;
+                $('#fileInput').click();
+            });
+            $('#fileInput').on('change', (e) => handleFile(e.target.files[0]));
+            $('#btnRemoveFile').on('click', (e) => {
+                e.stopPropagation();
+                resetFile();
+            });
+        }
+
+        function resetFile() {
+            appState.fileName = null;
+            appState.metadataPayload = null;
+            appState.summaryCounts = null;
+            appState.warnings = [];
+            appState.originalDataSets = [];
+            $('#fileInput').val('');
+            $('#fileInfo').hide();
+            $('#uploadArea h3, #uploadArea p, #uploadArea > i').show();
+            $('#btnToPreview').prop('disabled', true);
+            showFileError(null);
+        }
+
+        function showFileError(message) {
+            if (!message) {
+                $('#fileErrorBox').hide();
+                return;
+            }
+            $('#fileErrorText').text(message);
+            $('#fileErrorBox').show();
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            showFileError(null);
+
+            if (!file.name.toLowerCase().endsWith('.json')) {
+                showFileError('Seuls les fichiers .json sont acceptés.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                let parsed;
+                try {
+                    parsed = JSON.parse(e.target.result);
+                } catch (err) {
+                    showFileError('Fichier JSON invalide : ' + err.message);
+                    return;
+                }
+
+                const detected = detectMetadataPayload(parsed);
+                if (!detected) {
+                    showFileError("Structure non reconnue. Attendu : un export du module Indicateurs + Dépendances (clé \"data\"), ou un paquet de métadonnées DHIS2 brut (clés indicators, dataElements...).");
+                    return;
+                }
+
+                appState.fileName = file.name;
+                appState.metadataPayload = detected.payload;
+                appState.warnings = detected.warnings;
+                appState.originalDataSets = Array.isArray(detected.payload.dataSets) ? detected.payload.dataSets.slice() : [];
+
+                $('#fileName').text(file.name);
+                $('#uploadArea > i, #uploadArea h3, #uploadArea p').hide();
+                $('#fileInfo').show();
+                $('#btnToPreview').prop('disabled', false);
+                showToast('success', 'Fichier chargé', `${file.name} analysé avec succès.`);
+            };
+            reader.onerror = () => showFileError('Impossible de lire le fichier.');
+            reader.readAsText(file);
+        }
+
+        const KNOWN_KEYS = Object.keys(SUMMARY_LABELS);
+
+        function detectMetadataPayload(parsed) {
+            if (!parsed || typeof parsed !== 'object') return null;
+
+            // Shape produced by export-indicators-dependencies.html: { data: {...}, summary, warnings }
+            if (parsed.data && typeof parsed.data === 'object' && !Array.isArray(parsed.data)) {
+                if (KNOWN_KEYS.some(k => Array.isArray(parsed.data[k]))) {
+                    return { payload: parsed.data, warnings: parsed.warnings || [] };
+                }
+            }
+
+            // Raw DHIS2 metadata bundle posted directly (or a re-saved "data" export)
+            if (KNOWN_KEYS.some(k => Array.isArray(parsed[k]))) {
+                return { payload: parsed, warnings: parsed.warnings || [] };
+            }
+
+            return null;
+        }
+
+        // --- Step 2: Preview & options ---
+        function buildPreview() {
+            const payload = appState.metadataPayload;
+            appState.summaryCounts = {};
+            KNOWN_KEYS.forEach(key => {
+                if (key === 'dataSets') {
+                    appState.summaryCounts[key] = appState.originalDataSets.length;
+                    return;
+                }
+                appState.summaryCounts[key] = Array.isArray(payload[key]) ? payload[key].length : 0;
+            });
+
+            const grid = $('#summaryGrid');
+            grid.empty();
+            KNOWN_KEYS.forEach(key => {
+                const count = appState.summaryCounts[key];
+                grid.append(`
+                    <div class="summary-tile ${count === 0 ? 'empty' : ''}">
+                        <span class="label">${SUMMARY_LABELS[key]}</span>
+                        <span class="value">${count}</span>
+                    </div>
+                `);
+            });
+
+            const pointsBox = $('#pointsBox');
+            const pointsList = $('#pointsList');
+            pointsList.empty();
+            if (appState.warnings && appState.warnings.length > 0) {
+                appState.warnings.forEach(w => pointsList.append(`<li>${escapeHtml(w)}</li>`));
+                pointsBox.show();
+            } else {
+                pointsBox.hide();
+            }
+
+            // Reset the DataSets include toggle to its safe default each time a new preview is built.
+            $('#includeDataSets').prop('checked', false);
+            payload.dataSets = [];
+        }
+
+        function onToggleDataSets() {
+            const payload = appState.metadataPayload;
+            if (!payload) return;
+
+            payload.dataSets = $(this).is(':checked') ? appState.originalDataSets : [];
+        }
+
+        // --- Options helpers ---
+        function getImportUrl(dryRun) {
+            const strategy = $('#importStrategy').val();
+            const atomicMode = $('#atomicMode').val();
+            const mergeMode = $('#mergeMode').val();
+            const params = [
+                `importStrategy=${encodeURIComponent(strategy)}`,
+                `atomicMode=${encodeURIComponent(atomicMode)}`,
+                `mergeMode=${encodeURIComponent(mergeMode)}`
+            ];
+            if (dryRun) params.push('dryRun=true');
+            return `/api/metadata?${params.join('&')}`;
+        }
+
+        // --- Report rendering (shared between Dry Run and Import) ---
+        function renderStatus(container, status) {
+            const cls = status === 'OK' ? 'OK' : (status === 'ERROR' ? 'ERROR' : 'WARNING');
+            const label = { OK: 'OK', WARNING: 'AVERTISSEMENT', ERROR: 'ERREUR' }[cls] || cls;
+            container.html(`<span class="status-pill ${cls}"><i class="fas fa-circle" style="font-size:8px;"></i> ${label}</span>`);
+        }
+
+        function renderTypeReports(container, response) {
+            container.empty();
+            if (!response.typeReports || response.typeReports.length === 0) return;
+
+            response.typeReports.forEach(tr => {
+                const stats = tr.stats || {};
+                const errors = [];
+                (tr.objectReports || []).forEach(or => {
+                    (or.errorReports || []).forEach(er => {
+                        errors.push(`[index ${or.index}] ${er.message} (${er.errorCode})`);
+                    });
+                });
+
+                const block = $(`
+                    <div class="type-report">
+                        <div class="type-report-header">
+                            <span>${escapeHtml(shortClassName(tr.klass))}</span>
+                            <span class="type-report-stats">Créés: ${stats.created || 0} · Mis à jour: ${stats.updated || 0} · Ignorés: ${stats.ignored || 0} · Supprimés: ${stats.deleted || 0}</span>
+                        </div>
+                    </div>
+                `);
+
+                if (errors.length > 0) {
+                    const errBox = $('<div class="type-report-errors"></div>');
+                    errors.slice(0, 20).forEach(e => errBox.append(`<div>${escapeHtml(e)}</div>`));
+                    if (errors.length > 20) errBox.append(`<div>... et ${errors.length - 20} autre(s) erreur(s).</div>`);
+                    block.append(errBox);
+                }
+
+                container.append(block);
+            });
+        }
+
+        function shortClassName(klass) {
+            if (!klass) return 'Objet';
+            const parts = String(klass).split('.');
+            return parts[parts.length - 1];
+        }
+
+        function logEntry(container, msg, type = 'info') {
+            const div = $(`<div class="log-entry ${type}">[${new Date().toLocaleTimeString()}] ${msg}</div>`);
+            container.append(div);
+            container.scrollTop(container[0].scrollHeight);
+        }
+
+        // --- Step 3: Dry Run ---
+        async function runDryRun() {
+            const $btn = $('#btnRunDryRun');
+            const log = $('#dryRunLog');
+            log.empty();
+            $('#dryRunTypeReports').empty();
+            $('#dryRunStatusContainer').empty();
+            $('#btnToImport').prop('disabled', true);
+
+            logEntry(log, 'Démarrage de la simulation...', 'system');
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Simulation en cours...');
+            $('#dryRunProgress').show();
+
+            try {
+                const response = await dhis2Session.post(getImportUrl(true), appState.metadataPayload);
+
+                renderStatus($('#dryRunStatusContainer'), response.status);
+                renderTypeReports($('#dryRunTypeReports'), response);
+
+                if (response.stats) {
+                    logEntry(log, `Stats globales — Créés: ${response.stats.created}, Mis à jour: ${response.stats.updated}, Ignorés: ${response.stats.ignored}, Supprimés: ${response.stats.deleted}, Total: ${response.stats.total}`, 'info');
+                }
+
+                if (response.status === 'OK') {
+                    logEntry(log, 'Simulation réussie sans erreur. Prêt pour import.', 'success');
+                    $('#btnToImport').prop('disabled', false);
+                    showToast('success', 'Dry Run réussi', 'Aucune erreur détectée.');
+                } else if (response.status === 'WARNING') {
+                    logEntry(log, 'Simulation terminée avec des avertissements. Vérifiez le détail par type ci-dessus avant de continuer.', 'warning');
+                    $('#btnToImport').prop('disabled', false);
+                    showToast('warning', 'Dry Run avec avertissements', 'Vérifiez le rapport avant import.');
+                } else {
+                    logEntry(log, 'Simulation en erreur. Corrigez le paquet ou les options avant de réessayer.', 'error');
+                    showToast('error', 'Dry Run en erreur', 'Consultez le rapport détaillé.');
+                }
+            } catch (err) {
+                console.error('Erreur dry run:', err);
+                logEntry(log, `Erreur réseau/serveur: ${err.message}`, 'error');
+                showToast('error', 'Erreur', err.message || 'Échec de la simulation.');
+            } finally {
+                $('#dryRunProgress').hide();
+                $btn.prop('disabled', false).html('<i class="fas fa-play"></i> Lancer la Simulation');
+            }
+        }
+
+        // --- Step 4: Real import ---
+        async function runImport() {
+            const $btn = $('#btnRunImport');
+            const log = $('#importLog');
+            log.empty();
+            $('#importTypeReports').empty();
+            $('#importStatusContainer').empty();
+            $('#importStats').hide();
+
+            logEntry(log, "Démarrage de l'import réel...", 'system');
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Import en cours...');
+            $('#importProgress').show();
+
+            try {
+                const response = await dhis2Session.post(getImportUrl(false), appState.metadataPayload);
+
+                renderStatus($('#importStatusContainer'), response.status);
+                renderTypeReports($('#importTypeReports'), response);
+
+                if (response.stats) {
+                    $('#statCreated').text(response.stats.created);
+                    $('#statUpdated').text(response.stats.updated);
+                    $('#statIgnored').text(response.stats.ignored);
+                    $('#importStats').css('display', 'flex');
+                    logEntry(log, `Stats globales — Créés: ${response.stats.created}, Mis à jour: ${response.stats.updated}, Ignorés: ${response.stats.ignored}, Supprimés: ${response.stats.deleted}`, 'info');
+                }
+
+                if (response.status === 'OK') {
+                    logEntry(log, 'Import terminé avec succès.', 'success');
+                    showToast('success', 'Import réussi', `${response.stats?.created || 0} créés, ${response.stats?.updated || 0} mis à jour.`);
+                    $btn.html('<i class="fas fa-check"></i> Import terminé');
+                } else if (response.status === 'WARNING') {
+                    logEntry(log, 'Import terminé avec des avertissements. Vérifiez le rapport détaillé.', 'warning');
+                    showToast('warning', 'Import terminé avec avertissements', 'Vérifiez le rapport.');
+                    $btn.prop('disabled', false).html('<i class="fas fa-redo"></i> Réimporter');
+                } else {
+                    logEntry(log, "Import en erreur — rien n'a peut-être été appliqué (selon le mode atomique).", 'error');
+                    showToast('error', "Échec de l'import", 'Consultez le rapport détaillé.');
+                    $btn.prop('disabled', false).html('<i class="fas fa-redo"></i> Réessayer');
+                }
+            } catch (err) {
+                console.error('Erreur import:', err);
+                logEntry(log, `Erreur réseau/serveur: ${err.message}`, 'error');
+                showToast('error', 'Erreur', err.message || "Échec de l'import.");
+                $btn.prop('disabled', false).html('<i class="fas fa-redo"></i> Réessayer');
+            } finally {
+                $('#importProgress').hide();
+            }
+        }
+    </script>
+</body>
+
+</html>

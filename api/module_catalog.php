@@ -37,6 +37,7 @@ function dhis2ToolsModuleCatalog()
         array('path' => 'import-orgunits.html', 'name' => 'Import Unités d\'Organisation', 'category' => 'Import', 'icon' => 'fa-sitemap'),
         array('path' => 'import-users.html', 'name' => 'Import Utilisateurs', 'category' => 'Import', 'icon' => 'fa-user-plus'),
         array('path' => 'import-metadata.html', 'name' => 'Import Métadonnées', 'category' => 'Import', 'icon' => 'fa-file-import'),
+        array('path' => 'import-indicators-dependencies.html', 'name' => 'Import Indicateurs + Dépendances', 'category' => 'Import', 'icon' => 'fa-percentage'),
 
         // Analyse
         array('path' => 'geo-analysis.html', 'name' => 'Analyse Géo-Interactive', 'category' => 'Analyse', 'icon' => 'fa-map-location-dot'),
