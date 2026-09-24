@@ -81,6 +81,40 @@
             margin-bottom: 6px;
         }
 
+        .collision-box {
+            background: rgba(88, 166, 255, 0.08);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .collision-box-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #58a6ff;
+        }
+
+        .collision-box-text {
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .collision-box ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .collision-box ul li {
+            margin-bottom: 6px;
+        }
+
         .progress-container {
             margin-bottom: 20px;
         }
@@ -398,6 +432,17 @@
                     <ul id="pointsList"></ul>
                 </div>
 
+                <div class="collision-box" id="collisionBox">
+                    <div class="collision-box-title">
+                        <i class="fas fa-code-compare"></i> Types d'indicateur en conflit de nom (avec la cible)
+                    </div>
+                    <p class="collision-box-text">DHIS2 impose un nom unique par Type d'indicateur. Les types
+                        ci-dessous portent le même nom qu'un type déjà présent sur l'instance cible, sous un autre
+                        UID — créer un doublon échouerait à l'import. Ils seront automatiquement reliés à l'objet
+                        existant sur la cible.</p>
+                    <ul id="collisionList"></ul>
+                </div>
+
                 <div class="options-grid">
                     <div class="option-field">
                         <label for="importStrategy">Stratégie d'import</label>
@@ -663,7 +708,7 @@
             }
 
             initUpload();
-            $('#btnToPreview').on('click', () => { buildPreview(); goToStep(2); });
+            $('#btnToPreview').on('click', () => { buildPreview(); goToStep(2); checkIndicatorTypeCollisions(); });
             $('#btnToDryRun').on('click', () => goToStep(3));
             $('#btnToImport').on('click', () => goToStep(4));
             $('#includeDataSets').on('change', onToggleDataSets);
@@ -812,7 +857,7 @@
             KNOWN_KEYS.forEach(key => {
                 const count = appState.summaryCounts[key];
                 grid.append(`
-                    <div class="summary-tile ${count === 0 ? 'empty' : ''}">
+                    <div class="summary-tile ${count === 0 ? 'empty' : ''}" data-key="${key}">
                         <span class="label">${SUMMARY_LABELS[key]}</span>
                         <span class="value">${count}</span>
                     </div>
@@ -832,6 +877,59 @@
             // Reset the DataSets include toggle to its safe default each time a new preview is built.
             $('#includeDataSets').prop('checked', false);
             payload.dataSets = [];
+
+            $('#collisionBox').hide();
+            $('#collisionList').empty();
+        }
+
+        // --- Name-collision check (IndicatorType) ---
+        // DHIS2 enforces a unique `name` per IndicatorType. The export carries the source UID, but a
+        // target instance commonly already has its own IndicatorType with the same name under a
+        // different UID (e.g. default types like "Number", "Per cent" or locale-specific ones like
+        // "Facteur 1"). Creating the source object as-is then fails with a uniqueness conflict — this
+        // is not always caught by DHIS2's own dryRun, so we check it ourselves and remap references to
+        // the existing target object instead of trying to create a duplicate.
+        async function checkIndicatorTypeCollisions() {
+            const payload = appState.metadataPayload;
+            const localTypes = Array.isArray(payload.indicatorTypes) ? payload.indicatorTypes : [];
+            if (localTypes.length === 0) return;
+
+            let remoteTypes;
+            try {
+                const resp = await dhis2Session.getMetadata('indicatorTypes', { fields: 'id,name', paging: false });
+                remoteTypes = resp.indicatorTypes || [];
+            } catch (err) {
+                console.error('Erreur vérification collisions IndicatorType:', err);
+                return;
+            }
+
+            const remoteByName = new Map(remoteTypes.map(t => [t.name, t.id]));
+            const collisions = localTypes
+                .filter(t => remoteByName.has(t.name) && remoteByName.get(t.name) !== t.id)
+                .map(t => ({ name: t.name, sourceId: t.id, targetId: remoteByName.get(t.name) }));
+
+            if (collisions.length === 0) return;
+
+            const idMap = new Map(collisions.map(c => [c.sourceId, c.targetId]));
+            payload.indicatorTypes = localTypes.filter(t => !idMap.has(t.id));
+            (payload.indicators || []).forEach(ind => {
+                if (ind.indicatorType && idMap.has(ind.indicatorType.id)) {
+                    ind.indicatorType = { id: idMap.get(ind.indicatorType.id) };
+                }
+            });
+
+            appState.summaryCounts.indicatorTypes = payload.indicatorTypes.length;
+            $('#summaryGrid .summary-tile[data-key="indicatorTypes"]')
+                .toggleClass('empty', payload.indicatorTypes.length === 0)
+                .find('.value').text(payload.indicatorTypes.length);
+
+            const list = $('#collisionList');
+            list.empty();
+            collisions.forEach(c => {
+                list.append(`<li><strong>${escapeHtml(c.name)}</strong> — lié à l'objet existant <code>${c.targetId}</code> sur la cible (au lieu de créer un doublon <code>${c.sourceId}</code>)</li>`);
+            });
+            $('#collisionBox').show();
+            showToast('info', 'Conflits de nom résolus', `${collisions.length} type(s) d'indicateur remappé(s) vers la cible.`);
         }
 
         function onToggleDataSets() {
