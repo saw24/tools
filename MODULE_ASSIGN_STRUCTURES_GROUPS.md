@@ -1,185 +1,82 @@
-# 📦 Module: Affectation des Groupes aux Structures
+# Module : Affectation des Groupes aux Structures
 
-## 📋 Vue d'ensemble
+Affecte des groupes d'unités d'organisation DHIS2 aux structures, dans une table interactive (une case à cocher par groupe). Les structures sans groupe sont prioritaires. Ce module remplace l'ancien module « Structures sans Groupe » (`descendant-structures-filter.html`, supprimé).
 
-Module permettant d'assigner des groupes aux structures organisationnelles DHIS2 de manière efficace et ergonomique.
+## Fichiers
 
-**Fichiers:**
-- `assign-structures-groups.html` - Interface frontend
-- `api/assign-org-units-groups.php` - API backend
+- `assign-structures-groups.html` : interface (jQuery, `dhis2Session`, même socle que les autres modules)
+- `api/assign-org-units-groups.php` : API backend (proxy vers DHIS2)
 
-## 🎯 Fonctionnalités
+## Utilisation
 
-### 1. **Catégorisation intelligente**
-Les structures sont automatiquement triées en 3 catégories:
-- 🔴 **Sans groupe** (priorité haute)
-- 🟡 **Groupes incomplets** (à compléter)
-- 🟢 **Complets** (masqués par défaut)
+1. Se connecter à DHIS2 (sinon redirection vers `index.html`).
+2. Choisir une catégorie dans la barre latérale :
+   - **Sans groupe** (par défaut, prioritaire)
+   - **Groupes incomplets** : au moins un groupe, mais moins que le total des groupes existants
+   - **Complets** : appartient à tous les groupes
+3. Filtrer (voir ci-dessous), cocher ou décocher les groupes voulus.
+4. Cliquer sur **Appliquer les changements**.
 
-### 2. **Interface interactive**
-- Table avec cases à cocher pour chaque groupe
-- Filtrage par groupes spécifiques
-- Sélection multiple avec checkbox "Tout cocher"
-- Mise à jour du compteur de groupes en temps réel
+## Fonctionnalités
 
-### 3. **Opérations en masse**
-- Affectation groupée de groupes à plusieurs structures
-- Historique des changements avant application
-- Validation et feedback en temps réel
+### Filtres (se combinent entre eux)
+- **Nom** : recherche insensible à la casse et aux accents.
+- **Niveau** : liste des niveaux d'organisation DHIS2.
+- **Groupes** : chaque groupe est un filtre à trois états. 1 clic : a le groupe (vert) ; 2 clics : n'a pas le groupe (rouge, barré) ; 3 clics : aucun filtre. Le filtre porte sur les groupes déjà enregistrés, pas sur les cases en cours de modification. Le lien « Effacer les filtres » les retire tous.
+- Changer de catégorie réinitialise les filtres et **efface les modifications en attente**.
 
-### 4. **Notifications**
-- Toast notifications pour les succès/erreurs
-- Messages d'information contextuelle
-- Compteur de changements appliqués
+### Table
+- Pagination (50 / 100 / 200 / 500 lignes, 100 par défaut), indispensable avec des milliers de structures.
+- Colonnes « sélection » et « Structure » figées à gauche, colonne « Total » figée à droite, en-tête figé en haut (fond opaque).
+- Noms de groupes affichés à la verticale dans l'en-tête.
+- Au survol d'une case, sa ligne et sa colonne sont surlignées ; au clic, le surlignage reste (plus foncé) jusqu'au clic suivant.
+- Cases à cocher à fond transparent.
+- La barre d'info indique le nombre de structures (« 12 sur 130 » si filtré) et le nombre de modifications en attente.
 
-## 🔧 Architecture technique
+### Export CSV
+Bouton « Exporter CSV » : exporte tout le résultat filtré de la catégorie (toutes pages). Colonnes : `ID, Nom, Niveau, Parent Direct, Groupes`. Encodage UTF-8 avec BOM, fichier `structures_<catégorie>_<date>.csv`.
 
-### Backend (PHP)
+### Enregistrement
+- Les modifications restent locales tant que « Appliquer » n'est pas cliqué.
+- Envoi **par lots de 20 structures**, avec compteur de progression sur un écran de blocage qui interdit toute modification de l'interface pendant l'opération.
+- Après succès, seules les données locales sont mises à jour (pas de rechargement complet depuis DHIS2) : la catégorie active reste affichée, les structures qui changent d'état en sortent, les compteurs sont recalculés, les filtres sont conservés.
+- En cas d'échec partiel, un message affiche la première erreur DHIS2 ; les structures en échec gardent leurs modifications en attente pour une nouvelle tentative.
+- Limite connue : en cas de modification concurrente par un autre utilisateur, recharger la page pour voir les données à jour.
 
-**Classe:** `AssignOrgUnitsGroupsAPI`
+## API (`api/assign-org-units-groups.php`)
 
-#### Actions disponibles:
+Toutes les actions : `POST` JSON avec `dhis2_url` et `dhis2_auth` (en-tête `Authorization`), action passée en `?action=`.
 
-1. **`action=list`** - Récupérer les structures catégorisées
-   - Requête: POST avec config DHIS2
-   - Réponse: Structures groupées par état
+| Action | Rôle |
+|--------|------|
+| `groups` | Liste des groupes (`id`, `displayName`), triée par nom |
+| `list` | Toutes les structures (`id`, `displayName`, `path`, `level`, `parent`, groupes), classées en `without_groups`, `incomplete_groups`, `complete`, avec les totaux |
+| `stats` | Nombre total de structures et de groupes |
+| `assign` | Corps : `assignments: [{ouId, groupIds}]` (liste complète des groupes souhaités). Réponse : `results.success`, `results.failed`, `successCount`, `failedCount` |
 
-2. **`action=groups`** - Récupérer les groupes disponibles
-   - Requête: POST avec config DHIS2
-   - Réponse: Liste des groupes triée
+### Pourquoi l'affectation passe par les groupes
 
-3. **`action=stats`** - Récupérer les statistiques
-   - Total structures et groupes
+Dans DHIS2, la relation structure/groupe appartient au **groupe** : un `PATCH` sur `/api/organisationUnits/{id}` avec `organisationUnitGroups` n'a aucun effet. Pour chaque structure, l'API :
 
-4. **`action=assign`** - Appliquer les changements
-   - Requête: POST avec tableau d'affectations
-   - Utilise PATCH sur `/api/organisationUnits/{id}`
+1. lit ses groupes actuels (`GET /api/organisationUnits/{id}?fields=organisationUnitGroups[id]`) ;
+2. ajoute les groupes manquants : `POST /api/organisationUnitGroups/{groupId}/organisationUnits/{ouId}` ;
+3. retire les groupes décochés : `DELETE` sur la même URL.
 
-### Frontend (JavaScript/HTML)
+`set_time_limit(300)` est appliqué par requête, d'où les lots de 20 côté interface.
 
-**Classe:** `AssignGroupsModule`
+## Droits requis
 
-#### Flux principal:
-1. Chargement des données (groupes + structures)
-2. Rendu de la sidebar (catégories)
-3. Sélection d'une catégorie
-4. Rendu de la table interactive
-5. Modification des affectations
-6. Envoi au backend via `applyChanges()`
+L'utilisateur DHIS2 doit pouvoir modifier les groupes d'unités d'organisation et voir les structures concernées. Sans cela, l'enregistrement échoue avec le message d'erreur DHIS2.
 
-#### Gestion de l'état:
-- `this.changes` - Map des modifications (structure ID → array de groupes)
-- `this.selectedCategory` - Catégorie active
-- `this.selectedGroupFilters` - Filtres appliqués
+## Dépannage
 
-## 📊 Flux de données
+- **404 sur l'API** : l'URL doit rester relative (`api/assign-org-units-groups.php`).
+- **`showToast is not defined`** : la fonction est définie dans la page (pas dans les scripts partagés) ; ne pas retirer son bloc.
+- **Erreurs 502 sur `interactions.php` / `stats.php`** : indépendantes de ce module (base de données des statistiques inaccessible).
+- **« 0 structures mises à jour »** : lire le message d'erreur affiché ; le plus souvent un droit DHIS2 manquant.
 
-```
-DHIS2
-  ↓
-API: /list → Récupère structures + groupes
-  ↓
-Frontend: Catégorise + affiche
-  ↓
-Utilisateur: Modifie les cases à cocher
-  ↓
-Frontend: Accumule les changements dans this.changes
-  ↓
-API: /assign → Envoie les changements
-  ↓
-DHIS2: PATCH /api/organisationUnits/{id}
-  ↓
-API: Retourne résultats (succès/erreurs)
-  ↓
-Frontend: Toast + rechargement des données
-```
+## Pistes d'évolution
 
-## 🚀 Utilisation
-
-### Pour l'utilisateur:
-1. Accéder à `/assign-structures-groups.html`
-2. Cliquer sur une catégorie (ex: "Sans groupe")
-3. Vérifier les groupes à assigner (filtrage optionnel)
-4. Cocher les cases pour assigner les groupes
-5. Cliquer "Appliquer les changements"
-
-### Pour les développeurs:
-```javascript
-// Initialiser le module
-const module = new AssignGroupsModule();
-
-// Charger les données
-await module.loadData();
-
-// Récupérer les structures
-console.log(module.allOrgUnits);
-console.log(module.allGroups);
-```
-
-## 🔗 Intégration à DHIS2
-
-Le module utilise l'API DHIS2 via:
-- `GET /api/organisationUnitGroups` - Récupérer groupes
-- `GET /api/organisationUnits` - Récupérer structures avec groupes
-- `PATCH /api/organisationUnits/{id}` - Mettre à jour structure
-
-### Payload PATCH:
-```json
-{
-  "organisationUnitGroups": [
-    {"id": "group1"},
-    {"id": "group2"}
-  ]
-}
-```
-
-## 🎨 Personnalisation
-
-### Couleurs (CSS variables):
-```css
---primary-color: #3b82f6;      /* Bleu principal */
---success-color: #10b981;      /* Vert */
---warning-color: #f59e0b;      /* Orange */
---danger-color: #ef4444;       /* Rouge */
-```
-
-### Icônes de catégorie:
-```javascript
-// Dans renderCategories()
-{ key: 'without_groups', icon: '🔴', label: 'Sans groupe' },
-{ key: 'incomplete_groups', icon: '🟡', label: 'Groupes incomplets' },
-{ key: 'complete', icon: '🟢', label: 'Complets' }
-```
-
-## 📈 Amélioration futures possibles
-
-- [ ] Export/import de la matrice d'affectation
-- [ ] Historique des changements avec audit log
-- [ ] Recherche/filtrage par nom de structure
-- [ ] Mode "Bulk" pour appliquer le même groupe à plusieurs structures
-- [ ] Validation avant application (structures en doublon, etc.)
-- [ ] Support du drag-and-drop
-- [ ] Affichage du chemin hiérarchique des structures
-
-## ⚠️ Notes importantes
-
-1. **Performance**: Pour > 10K structures, la pagination est recommandée
-2. **Authentification**: Repose sur `window.config` et `window.dhis2Session`
-3. **CORS**: L'API utilise `Access-Control-Allow-Origin: *`
-4. **Erreurs**: Les erreurs DHIS2 HTTP >= 400 sont loggées et affichées
-
-## 🐛 Dépannage
-
-### Module ne charge pas:
-- Vérifier que `window.config` est défini
-- Vérifier que `window.dhis2Session` existe
-- Vérifier les logs navigateur (F12)
-
-### Changements ne s'appliquent pas:
-- Vérifier les permissions DHIS2 de l'utilisateur
-- Vérifier que l'API retourne des erreurs (console)
-- Vérifier la configuration DHIS2 (URL, auth)
-
-### Table reste vide:
-- Vérifier qu'il y a des structures dans la catégorie
-- Vérifier les filtres appliqués (groupes sélectionnés)
+- Regrouper les colonnes par ensemble de groupes DHIS2 et définir « incomplet » comme « sans groupe dans un ensemble de groupes donné » (plus pertinent que le total des groupes).
+- Confirmation avant de changer de catégorie quand des modifications sont en attente.
+- Journal des affectations effectuées.
