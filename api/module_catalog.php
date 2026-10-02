@@ -42,7 +42,7 @@ function dhis2ToolsModuleCatalog()
 
         // Analyse
         array('path' => 'geo-analysis.html', 'name' => 'Analyse Géo-Interactive', 'category' => 'Analyse', 'icon' => 'fa-map-location-dot'),
-        array('path' => 'descendant-structures-filter.html', 'name' => 'Structures sans Groupe', 'category' => 'Analyse', 'icon' => 'fa-filter'),
+        array('path' => 'assign-structures-groups.html', 'name' => 'Affectation des Groupes aux Structures', 'category' => 'Analyse', 'icon' => 'fa-link'),
         array('path' => 'advanced-structures-filter.html', 'name' => 'Filtre Structures', 'category' => 'Analyse', 'icon' => 'fa-filter'),
         array('path' => 'map-visualizer.html', 'name' => 'Visualisation Cartographique', 'category' => 'Analyse', 'icon' => 'fa-map-marked-alt'),
         array('path' => 'data-analysis.html', 'name' => 'Import table d\'une BD', 'category' => 'Analyse', 'icon' => 'fa-database'),

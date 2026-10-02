@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affectation des Groupes aux Structures - DHIS2 Tools</title>
+
+    <link href="vendor/fonts/inter.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dhis2-auth.css">
+
+    <style>
+        .module-container {
+            max-width: none;
+            width: 100%;
+            margin: 0;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .module-header h1 {
+            font-size: 36px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .module-header .subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            animation: fadeInLeft 0.8s ease-out;
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar-card h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-item {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .category-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(4px);
+        }
+
+        .category-item.active {
+            background: var(--primary-gradient);
+            color: white;
+            border-left-color: #fff;
+        }
+
+        .category-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .category-item.active .category-badge {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .main-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            animation: fadeInRight 0.8s ease-out;
+            display: flex;
+            flex-direction: column;
+            min-height: 600px;
+            min-width: 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .main-panel h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .info-bar {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .groups-filter {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .groups-filter label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .groups-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .group-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            color: var(--text-primary);
+        }
+
+        .group-btn:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .group-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            min-width: 0;
+            max-height: 65vh;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .table-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .table-wrapper thead {
+            background: rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-wrapper th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .table-wrapper td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-wrapper tbody tr:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .ou-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-action {
+            padding: 10px 20px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-action:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner i {
+            font-size: 32px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+            opacity: 0.5;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .input-checkbox {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 4px;
+            position: relative;
+            vertical-align: middle;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .input-checkbox:hover {
+            border-color: #667eea;
+        }
+
+        .input-checkbox:checked {
+            background: #667eea;
+            border-color: #667eea;
+        }
+
+        .input-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 0;
+            width: 4px;
+            height: 9px;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .table-wrapper th.group-col {
+            height: 130px;
+            padding: 8px 4px;
+            text-align: center;
+            vertical-align: bottom;
+            min-width: 36px;
+        }
+
+        .table-wrapper th.group-col span {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            display: inline-block;
+            max-height: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .table-wrapper td.sticky-col,
+        .table-wrapper th.sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            background: #1a1a3a;
+        }
+
+        .table-wrapper td.sticky-name,
+        .table-wrapper th.sticky-name {
+            position: sticky;
+            left: 40px;
+            z-index: 5;
+            background: #1a1a3a;
+            min-width: 220px;
+            max-width: 320px;
+        }
+
+        
+        .table-wrapper thead th {
+            position: sticky;
+            top: 0;
+            z-index: 11;
+            background: #1a1a3a;
+            box-shadow: inset 0 -1px 0 var(--border-color);
+        }
+
+        .table-wrapper td.sticky-total,
+        .table-wrapper th.sticky-total {
+            position: sticky;
+            right: 0;
+            z-index: 5;
+            background: #1a1a3a;
+            width: 70px;
+            min-width: 70px;
+            text-align: center;
+            box-shadow: inset 1px 0 0 var(--border-color);
+        }
+
+        .table-wrapper thead th.sticky-total {
+            z-index: 12;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 14px 10px 36px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: #667eea;
+        }
+
+        .table-wrapper thead th.sticky-col,
+        .table-wrapper thead th.sticky-name {
+            z-index: 12;
+        }
+
+        .apply-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2000;
+            background: rgba(15, 15, 35, 0.7);
+            backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            color: #fff;
+            font-weight: 600;
+            cursor: wait;
+        }
+
+        .apply-overlay i {
+            font-size: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        .group-btn.has {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #10b981;
+            color: #fff;
+        }
+
+        .group-btn.hasnot {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            color: #fff;
+            text-decoration: line-through;
+        }
+
+        .groups-buttons {
+            max-height: 130px;
+            overflow-y: auto;
+        }
+
+        .filter-hint {
+            font-weight: 400;
+            text-transform: none;
+            opacity: 0.8;
+            margin-left: 8px;
+        }
+
+        .link-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 12px;
+            text-transform: none;
+        }
+
+        .pagination-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .pagination-bar button,
+        .pagination-bar select {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .pagination-bar button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .table-wrapper td.hl-r,
+        .table-wrapper td.hl-c {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .table-wrapper td.hl-r.hl-c {
+            box-shadow: inset 0 0 0 2px #667eea;
+        }
+
+        .table-wrapper td.sticky-col.hl-r,
+        .table-wrapper td.sticky-name.hl-r,
+        .table-wrapper td.sticky-total.hl-r {
+            background: #262a5c;
+        }
+
+        .table-wrapper thead th.group-col.hl-c {
+            background: #303575;
+            color: #fff;
+        }
+
+        .table-wrapper td.act-r,
+        .table-wrapper td.act-c {
+            background: rgba(102, 126, 234, 0.38);
+        }
+
+        .table-wrapper td.act-r.act-c {
+            box-shadow: inset 0 0 0 2px #fff;
+        }
+
+        .table-wrapper td.sticky-col.act-r,
+        .table-wrapper td.sticky-name.act-r,
+        .table-wrapper td.sticky-total.act-r {
+            background: #343a80;
+        }
+
+        .table-wrapper thead th.group-col.act-c {
+            background: #4650b0;
+            color: #fff;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .filter-row .search-box {
+            flex: 1;
+            min-width: 220px;
+            margin-bottom: 0;
+        }
+
+        .filter-row select {
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            max-width: 260px;
+        }
+
+        .filter-row button {
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .filter-row button:hover {
+            border-color: #667eea;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="background-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i> Accueil
+            </a>
+        </div>
+        <div class="top-bar-content">
+            <div id="dhis2Status" class="dhis2-status" style="display: none;">
+                <div class="status-info">
+                    <span class="user-name" id="dhis2User">User</span>
+                    <span class="instance-url" id="dhis2Url">dhis2.org</span>
+                </div>
+                <button id="btnDHIS2Logout" class="btn-logout" title="Déconnexion">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+            <button id="btnDHIS2Connect" class="auth-btn connect">
+                <i class="fas fa-plug"></i> Connexion DHIS2
+            </button>
+        </div>
+    </div>
+
+    <div class="module-container">
+        <!-- Header -->
+        <div class="module-header">
+            <h1><i class="fas fa-link"></i> Affectation des Groupes aux Structures</h1>
+            <p class="subtitle">Assignez facilement les groupes aux structures organisationnelles prioritaires</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar: Catégorisation -->
+            <div class="sidebar-card">
+                <h2>
+                    <i class="fas fa-layer-group"></i> État des Structures
+                </h2>
+
+                <div id="categoryList">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner"></i>
+                        Chargement...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Panel: Éditeur -->
+            <div class="main-panel">
+                <h2>
+                    <i class="fas fa-edit"></i> Éditeur de Groupes
+                </h2>
+
+                <div class="info-bar" id="infoBar">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="infoText">Sélectionnez une catégorie pour commencer</span>
+                </div>
+
+                <div class="groups-filter">
+                    <label>Filtrer par Groupes
+                        <span class="filter-hint">1 clic : a le groupe &middot; 2 clics : n'a pas le groupe &middot; 3 clics : aucun</span>
+                        <button type="button" class="link-btn" id="clearGroupFilters">Effacer les filtres</button>
+                    </label>
+                    <div class="groups-buttons" id="groupsFilter"></div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchName" placeholder="Filtrer par nom de structure..." autocomplete="off">
+                    </div>
+                    <select id="levelFilter">
+                        <option value="">Tous les niveaux</option>
+                    </select>
+                    <button type="button" id="exportCsvBtn"><i class="fas fa-file-csv"></i> Exporter CSV</button>
+                </div>
+
+                <div class="pagination-bar" id="paginationBar"></div>
+
+                <div class="table-wrapper">
+                    <div id="tableContainer">
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            Sélectionnez une catégorie
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-action" id="applyBtn" disabled>
+                        <i class="fas fa-check"></i> Appliquer les changements
+                    </button>
+                    <button class="btn-action btn-secondary" id="resetBtn">
+                        <i class="fas fa-undo"></i> Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="apply-overlay" id="applyOverlay">
+        <i class="fas fa-spinner"></i>
+        <span id="applyOverlayText">Application des changements...</span>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="vendor/jquery/jquery-3.7.1.min.js"></script>
+    <script src="js/dhis2-session-manager.js"></script>
+    <script src="js/dhis2-auth.js"></script>
+    <script src="js/interaction-manager.js"></script>
+
+    <script>
+        let allOrgUnits = { without_groups: [], incomplete_groups: [], complete: [] };
+        let allGroups = [];
+        let selectedCategory = 'without_groups';
+        let currentOrgUnits = [];
+        let changes = new Map();
+        let levels = [];
+        let groupFilters = new Map();
+        let currentPage = 1;
+        let pageSize = 100;
+
+        const apiUrl = 'api/assign-org-units-groups.php';
+
+        $(document).ready(async function() {
+            // Vérifier la connexion
+            if (!dhis2Session.isConnected()) {
+                showToast('error', 'Session requise', 'Veuillez vous connecter à DHIS2.');
+                setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+                return;
+            }
+
+            try {
+                await loadData();
+                renderCategories();
+                attachEventListeners();
+            } catch (error) {
+                console.error('Erreur:', error);
+                showToast('error', 'Erreur', `${error.message}`);
+            }
+        });
+
+        async function loadData() {
+            const config = dhis2Session.getConfig();
+            const payload = {
+                dhis2_url: config.url,
+                dhis2_auth: config.authHeader
+            };
+
+            try {
+                // Charger les groupes
+                const groupsResp = await $.ajax({
+                    url: `${apiUrl}?action=groups`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload)
+                });
+
+                if (groupsResp.success) {
+                    allGroups = groupsResp.data.groups;
+                }
+
+                // Charger les structures
+                const listResp = await $.ajax({
+                    url: `${apiUrl}?action=list`,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload)
+                });
+
+                if (listResp.success) {
+                    allOrgUnits = listResp.data.categorized;
+                }
+
+                const levelsResp = await dhis2Session.get('/api/organisationUnitLevels.json?fields=id,displayName,level&paging=false&order=level:asc');
+                levels = (levelsResp && levelsResp.organisationUnitLevels) || [];
+                const selectedLevel = $('#levelFilter').val();
+                $('#levelFilter').html('<option value="">Tous les niveaux</option>' +
+                    levels.map(l => `<option value="${l.level}">${l.displayName} (niveau ${l.level})</option>`).join(''))
+                    .val(selectedLevel);
+            } catch (error) {
+                throw new Error(`Échec du chargement: ${error.statusText || error.message}`);
+            }
+        }
+
+        function renderCategories() {
+            const categoryList = $('#categoryList');
+            const categories = [
+                { key: 'without_groups', label: 'Sans groupe', icon: '🔴' },
+                { key: 'incomplete_groups', label: 'Groupes incomplets', icon: '🟡' },
+                { key: 'complete', label: 'Complets', icon: '🟢' }
+            ];
+
+            let html = '';
+            categories.forEach(cat => {
+                const isActive = cat.key === selectedCategory ? 'active' : '';
+                const count = allOrgUnits[cat.key].length;
+                html += `
+                    <div class="category-item ${isActive}" data-category="${cat.key}">
+                        <span>${cat.icon}</span>
+                        ${cat.label}
+                        <span class="category-badge">${count}</span>
+                    </div>
+                `;
+            });
+
+            categoryList.html(html);
+        }
+
+        function selectCategory(categoryKey) {
+            selectedCategory = categoryKey;
+            currentOrgUnits = allOrgUnits[categoryKey];
+            groupFilters.clear();
+            currentPage = 1;
+            changes.clear();
+            $('#searchName').val('');
+            $('#levelFilter').val('');
+
+            $('.category-item').removeClass('active');
+            $(`[data-category="${categoryKey}"]`).addClass('active');
+
+            renderGroupsFilter();
+            renderTable();
+            updateInfoBar();
+        }
+
+        function renderGroupsFilter() {
+            const groupsFilter = $('#groupsFilter');
+            groupsFilter.html(allGroups.map(group => {
+                const state = groupFilters.get(group.id) || '';
+                return `<button class="group-btn ${state}" data-group-id="${group.id}">${group.displayName}</button>`;
+            }).join(''));
+
+            groupsFilter.find('.group-btn').click(function() {
+                const groupId = $(this).data('group-id');
+                const current = groupFilters.get(groupId);
+                if (!current) groupFilters.set(groupId, 'has');
+                else if (current === 'has') groupFilters.set(groupId, 'hasnot');
+                else groupFilters.delete(groupId);
+
+                $(this).removeClass('has hasnot').addClass(groupFilters.get(groupId) || '');
+                currentPage = 1;
+                renderTable();
+            });
+        }
+
+        function normalizeText(str) {
+            return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        }
+
+        function getVisibleOrgUnits() {
+            const term = normalizeText($('#searchName').val().trim());
+            const level = $('#levelFilter').val();
+            return currentOrgUnits.filter(ou => {
+                if (term && !normalizeText(ou.displayName).includes(term)) return false;
+                if (level && String(ou.level) !== level) return false;
+                if (groupFilters.size === 0) return true;
+                const ids = ou.groups.map(g => g.id);
+                for (const [gid, state] of groupFilters) {
+                    if (state === 'has' && !ids.includes(gid)) return false;
+                    if (state === 'hasnot' && ids.includes(gid)) return false;
+                }
+                return true;
+            });
+        }
+
+        function renderPagination(total) {
+            const pages = Math.max(1, Math.ceil(total / pageSize));
+            const from = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const to = Math.min(total, currentPage * pageSize);
+
+            $('#paginationBar').html(`
+                <span>${from}-${to} sur ${total}</span>
+                <span>
+                    <button type="button" id="pgPrev" ${currentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                    <span style="margin: 0 8px;">Page ${currentPage} / ${pages}</span>
+                    <button type="button" id="pgNext" ${currentPage >= pages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+                </span>
+                <span>Lignes par page :
+                    <select id="pgSize">
+                        ${[50, 100, 200, 500].map(n => `<option value="${n}" ${n === pageSize ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                </span>
+            `);
+
+            $('#pgPrev').click(() => { currentPage--; renderTable(); });
+            $('#pgNext').click(() => { currentPage++; renderTable(); });
+            $('#pgSize').change(function() { pageSize = parseInt($(this).val(), 10); currentPage = 1; renderTable(); });
+        }
+
+        function renderTable() {
+            const tableContainer = $('#tableContainer');
+            const filtered = getVisibleOrgUnits();
+            const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (currentPage > pages) currentPage = pages;
+            const visibleOrgUnits = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+            renderPagination(filtered.length);
+
+            if (visibleOrgUnits.length === 0) {
+                tableContainer.html(`
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        ${currentOrgUnits.length === 0 ? 'Aucune structure dans cette catégorie' : 'Aucune structure ne correspond au filtre'}
+                    </div>
+                `);
+                updateInfoBar();
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sticky-col" style="width: 40px; min-width: 40px;"><input type="checkbox" id="selectAll" class="input-checkbox"></th>
+                            <th class="sticky-name">Structure</th>
+                            ${allGroups.map(g => `<th class="group-col" data-col="${g.id}" title="${g.displayName}"><span>${g.displayName}</span></th>`).join('')}
+                            <th class="sticky-total">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            visibleOrgUnits.forEach(ou => {
+                html += `
+                    <tr data-ou-id="${ou.id}">
+                        <td class="sticky-col"><input type="checkbox" class="select-row input-checkbox" data-ou-id="${ou.id}"></td>
+                        <td class="ou-name sticky-name">${ou.displayName}</td>
+                `;
+
+                allGroups.forEach(group => {
+                    const currentGroups = changes.has(ou.id)
+                        ? changes.get(ou.id)
+                        : ou.groups.map(g => g.id);
+                    const isChecked = currentGroups.includes(group.id) ? 'checked' : '';
+                    html += `
+                        <td style="text-align: center;" data-col="${group.id}">
+                            <input type="checkbox"
+                                   class="group-checkbox input-checkbox"
+                                   data-ou-id="${ou.id}"
+                                   data-group-id="${group.id}"
+                                   ${isChecked}>
+                        </td>
+                    `;
+                });
+
+                const totalCount = changes.has(ou.id)
+                    ? changes.get(ou.id).length
+                    : ou.groups.length;
+                html += `
+                    <td class="sticky-total" style="font-weight: 600;">
+                        <span class="group-count">${totalCount}</span>
+                    </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            tableContainer.html(html);
+            attachTableEventListeners();
+        }
+
+        function attachTableEventListeners() {
+            const selectAllCheckbox = $('#selectAll');
+            const rowCheckboxes = $('.select-row');
+            const groupCheckboxes = $('.group-checkbox');
+
+            selectAllCheckbox.off('change').on('change', function() {
+                rowCheckboxes.prop('checked', $(this).prop('checked'));
+            });
+
+            rowCheckboxes.off('change').on('change', function() {
+                const ouId = $(this).data('ou-id');
+                const row = $(`tr[data-ou-id="${ouId}"]`);
+                $(this).prop('checked') ? row.addClass('selected') : row.removeClass('selected');
+            });
+
+            groupCheckboxes.off('change').on('change', function() {
+                const ouId = $(this).data('ou-id');
+                const groupId = $(this).data('group-id');
+
+                if (!changes.has(ouId)) {
+                    const ou = currentOrgUnits.find(o => o.id === ouId);
+                    changes.set(ouId, ou.groups.map(g => g.id));
+                }
+
+                const currentGroups = changes.get(ouId);
+                if ($(this).prop('checked')) {
+                    if (!currentGroups.includes(groupId)) {
+                        currentGroups.push(groupId);
+                    }
+                } else {
+                    const index = currentGroups.indexOf(groupId);
+                    if (index > -1) {
+                        currentGroups.splice(index, 1);
+                    }
+                }
+
+                const row = $(`tr[data-ou-id="${ouId}"]`);
+                row.find('.group-count').text(currentGroups.length);
+
+                updateApplyButton();
+            });
+        }
+
+        function updateInfoBar() {
+            const total = currentOrgUnits.length;
+            const shown = getVisibleOrgUnits().length;
+            const count = shown === total ? total : `${shown} sur ${total}`;
+            const labels = {
+                'without_groups': 'structures sans groupe',
+                'incomplete_groups': 'structures avec groupes incomplets',
+                'complete': 'structures complètes'
+            };
+            const pending = changes.size ? ` · ${changes.size} modification(s) en attente` : '';
+            $('#infoText').text(`${count} ${labels[selectedCategory]}${pending}`);
+        }
+
+        function updateApplyButton() {
+            $('#applyBtn').prop('disabled', changes.size === 0);
+            updateInfoBar();
+        }
+
+        function attachEventListeners() {
+            $('#categoryList').off('click', '.category-item').on('click', '.category-item', function() {
+                selectCategory($(this).data('category'));
+            });
+
+            $('#levelFilter').off('change').on('change', function() { currentPage = 1; renderTable(); });
+            $('#exportCsvBtn').off('click').on('click', exportCsv);
+            $('#searchName').off('input').on('input', function() { currentPage = 1; renderTable(); });
+            $('#clearGroupFilters').off('click').on('click', function() {
+                groupFilters.clear();
+                currentPage = 1;
+                renderGroupsFilter();
+                renderTable();
+            });
+            $('#tableContainer')
+                .off('.crosshair')
+                .on('mouseover.crosshair', 'td[data-col]', function() { markCrosshair('hl', $(this)); })
+                .on('mouseleave.crosshair', 'table', function() { markCrosshair('hl', null); })
+                .on('click.crosshair', 'td[data-col]', function() { markCrosshair('act', $(this)); });
+
+            $('#applyBtn').off('click').on('click', applyChanges);
+            $('#resetBtn').off('click').on('click', resetChanges);
+        }
+
+        async function applyChanges() {
+            if (changes.size === 0) {
+                showToast('info', 'Info', 'Aucun changement à appliquer');
+                return;
+            }
+
+            setBusy(true);
+
+            const assignments = Array.from(changes.entries()).map(([ouId, groupIds]) => ({
+                ouId,
+                groupIds
+            }));
+
+            const config = dhis2Session.getConfig();
+            const batchSize = 20;
+            const done = [];
+            const failed = [];
+
+            try {
+                for (let i = 0; i < assignments.length; i += batchSize) {
+                    $('#applyOverlayText').text(`Application des changements... ${Math.min(i, assignments.length)} / ${assignments.length}`);
+
+                    const response = await $.ajax({
+                        url: `${apiUrl}?action=assign`,
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            dhis2_url: config.url,
+                            dhis2_auth: config.authHeader,
+                            assignments: assignments.slice(i, i + batchSize)
+                        })
+                    });
+
+                    if (!response.success) throw new Error(response.message);
+                    response.data.results.success.forEach(r => done.push(r.ouId));
+                    response.data.results.failed.forEach(r => failed.push(r));
+                }
+            } catch (error) {
+                showToast('error', 'Erreur', `${error.statusText || error.message}. ${done.length} structure(s) déjà enregistrée(s).`);
+            } finally {
+                applyLocally(done);
+                if (failed.length > 0) {
+                    showToast('error', 'Échec partiel', `${done.length} réussies, ${failed.length} en erreur. Ex : ${failed[0].error}`);
+                    console.error('Échecs affectation:', failed);
+                } else if (done.length > 0) {
+                    showToast('success', 'Succès', `${done.length} structures mises à jour`);
+                }
+                setBusy(false);
+                updateApplyButton();
+            }
+        }
+
+        function setBusy(busy) {
+            $('#applyOverlay').css('display', busy ? 'flex' : 'none');
+            $('.module-container').attr('inert', busy ? '' : null);
+            if (busy) $('#applyBtn, #resetBtn').prop('disabled', true);
+            else $('#resetBtn').prop('disabled', false);
+        }
+
+        window.showToast = function (type, title, message) {
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+            const toast = $(`<div class="toast toast-${type}"><i class="fas ${icons[type]}"></i><div class="toast-content"><div class="toast-title">${title}</div><div class="toast-message">${message}</div></div></div>`);
+            $('#toastContainer').append(toast);
+            setTimeout(() => toast.fadeOut(300, function () { $(this).remove(); }), 5000);
+        };
+
+        function exportCsv() {
+            const rows = getVisibleOrgUnits();
+            if (rows.length === 0) {
+                showToast('warning', 'Export', 'Aucune structure à exporter.');
+                return;
+            }
+
+            const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            let csv = 'ID,Nom,Niveau,Parent Direct,Groupes\n';
+            rows.forEach(ou => {
+                const groups = ou.groups.map(g => g.displayName).join('; ');
+                csv += [ou.id, ou.displayName, ou.level, ou.parent, groups].map(esc).join(',') + '\n';
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `structures_${selectedCategory}_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showToast('success', 'Export', `${rows.length} structures exportées.`);
+        }
+
+        function markCrosshair(prefix, $cell) {
+            const $table = $('#tableContainer table');
+            $table.find(`.${prefix}-r, .${prefix}-c`).removeClass(`${prefix}-r ${prefix}-c`);
+            if (!$cell) return;
+            $cell.closest('tr').children('td').addClass(`${prefix}-r`);
+            $table.find(`[data-col="${$cell.data('col')}"]`).addClass(`${prefix}-c`);
+        }
+
+        function applyLocally(doneIds) {
+            const all = [...allOrgUnits.without_groups, ...allOrgUnits.incomplete_groups, ...allOrgUnits.complete];
+            const doneSet = new Set(doneIds);
+
+            all.forEach(ou => {
+                if (doneSet.has(ou.id) && changes.has(ou.id)) {
+                    const ids = changes.get(ou.id);
+                    ou.groups = allGroups.filter(g => ids.includes(g.id)).map(g => ({ id: g.id, displayName: g.displayName }));
+                    ou.groupCount = ou.groups.length;
+                    changes.delete(ou.id);
+                }
+            });
+
+            const total = allGroups.length;
+            allOrgUnits = { without_groups: [], incomplete_groups: [], complete: [] };
+            all.forEach(ou => {
+                const key = ou.groupCount === 0 ? 'without_groups' : (ou.groupCount < total ? 'incomplete_groups' : 'complete');
+                allOrgUnits[key].push(ou);
+            });
+
+            Object.values(allOrgUnits).forEach(list => list.sort((a, b) => a.displayName.localeCompare(b.displayName)));
+
+            currentOrgUnits = allOrgUnits[selectedCategory];
+            renderCategories();
+            renderTable();
+            updateInfoBar();
+            updateApplyButton();
+        }
+
+        function resetChanges() {
+            changes.clear();
+            selectCategory(selectedCategory);
+            showToast('info', 'Info', 'Les changements ont été réinitialisés');
+        }
+    </script>
+</body>
+
+</html>
